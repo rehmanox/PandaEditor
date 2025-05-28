@@ -1,7 +1,7 @@
 <div id="toc">
   <ul style="list-style: none">
     <summary>
-      <h1> PandaEditor is a game development framework for Panda3D engine with an automated build system, support for C++ scripting and scene editor. </h1>
+      <h2>  PandaEditor is a powerful, open-source 3D development framework built on top of the Panda3D engine, designed to accelerate your game development, simulation, or visualization projects. With built-in support for C++ scripting and intuitive scene editing tools, PandaEditor enables rapid iteration and real-time feedback—bringing your ideas to life faster. </h2>
     </summary>
   </ul>
 </div>
@@ -29,7 +29,7 @@
 
 **Note: All dependencies except for Panda3D and C++ compilers (which you can download from the links above) are downloaded at runtime by the build system if they are not found on the system path.**
 
-🪧 PandaEditor is currently a work in progress and depending on when you are visiting this page, some of the mentioned features may not be available!  
+🛠️ PandaEditor is currently a work in progress and depending on when you are visiting this page, some of the mentioned features may not be available!  
 **Currently only Windows OS is supported.**
 
 <h2 align="center">Getting Started</h2>
@@ -45,7 +45,7 @@ PandaEditor uses a project-based workflow managed through its build system. When
 Follow the steps below to create or load a project.
 
 1. Run the `build.py` script.
-2. When prompted, enter the name of the project or its index number. Use the prefix `d` for demo projects or `g` for game projects—for example, enter `d1` to load the first demo project. 
+2. When prompted, enter the name of the project or its index number. When specifying the project by index, prefix the number with `d` for demos or `g` for games—for example, use `d1` to load the first demo project, or `g1` to load the first game project.
 3. If the specified project does not exist, you will have the option to create it or choose another.
 
 The system will first then search for the project in two directories:
@@ -151,9 +151,8 @@ protected:
 };
 ```
 
-**Editor scripts:-**  
-There is a special types of `RuntimeScripts` called `EditorScripts` that execute in **Developer Mode** only, they will not be shipped along with the final executable. You can use them to create tools, editor UI or for debugging purposes.  
-To specify a script as `EditorScripts` prefix your class name with `Editor_` for example 'Editor_CharacterController'.
+**Editor scripts:** There are special types of `RuntimeScripts` called `EditorScripts` that execute in **Developer Mode** only, they will not be shipped along with the final executable. You can use them to create development tools or for debugging purposes.  
+To specify a script as `EditorScripts` prefix the class name with `Editor_` for example 'Editor_FoliageSys'.
 
 ### Editor and Game Modes
 In PandaEditor, the **Editor** and **Game** modes are distinct. Any changes made in **Game mode** are **not persistent** — they will be discarded once you exit the mode.
