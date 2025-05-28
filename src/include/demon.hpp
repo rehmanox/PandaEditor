@@ -18,10 +18,7 @@ public:
 		GameViewStyle game_view_style;
 		float game_view_size;
 	};
-    
-    // ImGUI instance
-    Panda3DImGui p3d_imgui;
-  
+      
     // Delete copy constructor and assignment operator
 	// necessary for singleton
     Demon(const Demon&) = delete;
@@ -48,7 +45,11 @@ public:
 	Game game;
 	Settings settings = {GameViewStyle::BOTTOM_LEFT, 0.3f};
 	Settings default_settings = {GameViewStyle::BOTTOM_LEFT, 0.3f};
-	
+    PT(MouseWatcherRegion) game_mw_region;
+    
+    // ImGUI instance
+    Panda3DImGui p3d_imgui;
+    
 private:
     Demon();
     ~Demon();

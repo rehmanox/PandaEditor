@@ -77,14 +77,7 @@ void Game::init() {
     if (size.get_x() > 0 && size.get_y() > 0) {
         pixel2D.set_scale(2.0 / size.get_x(), 1.0, 2.0 / size.get_y());
     }
-
-	// Define MouseWatcherRegion
-	float view_size = demon.default_settings.game_view_size;
-    float mwr_right = 2 * view_size - 1;
-    float mwr_top = 2 * view_size - 1;
-	mouse_region = new MouseWatcherRegion("GameMouseWatcherRegion", -1, mwr_right, -1, mwr_top);
-	demon.engine.mouse_watcher->add_region(mouse_region);
-	
+    
     // Subscribe to events
     demon.engine.add_event_listener(
         "GameEventListener",

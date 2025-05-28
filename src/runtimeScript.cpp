@@ -85,7 +85,7 @@ void RuntimeScript::register_button_map(std::unordered_map<std::string, std::pai
 
 // Event handling
 void RuntimeScript::on_update(const PT(AsyncTask)&) {}
-
+ 
 void RuntimeScript::on_event(const std::string& event_name) {
     auto it = buttons_map_.find(event_name);
     if (it != buttons_map_.end()) {

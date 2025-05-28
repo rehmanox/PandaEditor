@@ -37,6 +37,16 @@ Demon::Demon() : game(*this) {
 	DCAST(Camera, game.main_cam.node())->set_camera_mask(game_mask);
 	DCAST(Camera, game.cam2D.node())->set_camera_mask(game_mask);
 	
+    // Define MouseWatcherRegion
+    // %r	Replaced with the name of the region (i.e. region.get_name())
+    // %w	Replaced with the name of the MouseWatcher generating the event
+	float size = default_settings.game_view_size;	
+	game_mw_region = new MouseWatcherRegion("GameMWRegion", 0.f, size, 0.f, size);
+    engine.mouse_watcher->set_enter_pattern("enter-%r");
+    engine.mouse_watcher->set_leave_pattern("leave-%r");
+    engine.mouse_watcher->set_within_pattern("within-%r");
+	engine.mouse_watcher->add_region(game_mw_region);
+    
 	// Hide editor only geo from game view and vice versa
 	engine.axis_grid.hide(game_mask);
 	engine.render2D.find("**/SceneCameraAxes").hide(game_mask);
@@ -95,7 +105,7 @@ Demon::Demon() : game(*this) {
         PathUtils::get_executable_dir(),
         "export_functions.txt");
     
-    // Load editor DLL if any
+    // Load editor DLLs
     const std::vector<std::string> dll_functions = load_dll_functions(dll_functions_file);
     std::vector<std::string> ed_functions;
 
@@ -383,8 +393,8 @@ void Demon::update_game_view(GameViewStyle style, float width, float height) {
     float mw_bottom = 2 * bottom - 1;
     float mw_top    = 2 * top - 1;
 
-    // Update the MouseWatcherRegion
-    game.mouse_region->set_frame(mw_left, mw_right, mw_bottom, mw_top);
+    // Update the game MouseWatcherRegion dimensions
+    game_mw_region->set_frame(mw_left, mw_right, mw_bottom, mw_top);
 }
 
 bool Demon::is_game_mode() {

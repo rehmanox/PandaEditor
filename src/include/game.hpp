@@ -31,7 +31,6 @@ public:
     PT(DisplayRegion)      dr3D;
     PT(DisplayRegion)      dr2D;
     PT(MouseWatcher)       mouse_watcher;
-	PT(MouseWatcherRegion) mouse_region;
 
 private:
     Demon& demon;
