@@ -242,6 +242,8 @@ void Engine::reset_clock() {
     AsyncTaskManager::get_global_ptr()->set_clock(ClockObject::get_global_clock());
 }
 
+void Engine::show_axis_grid(bool show) { show?axis_grid.show():axis_grid.hide(); }
+
 void Engine::clean_up() {
     // Remove all tasks
     AsyncTaskManager::get_global_ptr()->cleanup();

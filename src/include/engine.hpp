@@ -124,7 +124,7 @@ public:
 	void dispatch_events(bool ignore_mouse = false);
     
 	void trigger(const char*);
-    
+    void show_axis_grid(bool show = false);
 	void clean_up();
     
 	float get_aspect_ratio();
