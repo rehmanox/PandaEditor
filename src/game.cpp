@@ -31,7 +31,7 @@ void Game::init() {
     render2D.set_depth_write(false);
     render2D.set_material_off(true);
     render2D.set_two_sided(true);
-    render2D.reparent_to(demon.engine.render2D);
+    // render2D.reparent_to(demon.engine.render2D);
 	
     // Aspect 2D
     aspect2D = render2D.attach_new_node("GameAspect2d");
@@ -91,7 +91,7 @@ void Game::init() {
 void Game::on_evt(const std::string& event_name) {
     if (event_name == "window-event") {
         auto size = demon.engine.get_size();
-		
+
         if (size.get_x() > 0 && size.get_y() > 0) {
             pixel2D.set_scale(2.0 / size.get_x(), 1.0, 2.0 / size.get_y());
         }
