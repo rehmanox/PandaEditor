@@ -7,6 +7,7 @@
 #include "pathUtils.hpp"
 #include "taskUtils.hpp"
 #include "mathUtils.hpp"
+#include "helperUtils.hpp"
 #include "demon.hpp"
 #include "imgui.h"
 
@@ -296,15 +297,12 @@ void Demon::exit_game_mode() {
     AsyncTaskManager::get_global_ptr()->add(scripts_unload_task);
     engine.accept("shift-e", [this]() { exit(); });
     
-    /*
     // Clear the scene graphs, except for cameras
-    NodePathCollection children = game.render.get_children();
-    for (int i = 0; i < children.get_num_paths(); ++i) {
-        if (children[i] == game.main_cam)
-            continue;
-        children[i].remove_node();
-    }
-    */
+    remove_children_except(game.render,   { game.main_cam });
+    remove_children_except(game.render2D, { game.cam2D, game.aspect2D, game.pixel2D });
+    remove_children_except(game.aspect2D, { game.cam2D });
+    remove_children_except(game.pixel2D,  { game.cam2D });
+    // --------------------------------------------------------------------------------
     
     std::cout << "Game mode disabled\n";
 	_game_mode_enabled = false;
