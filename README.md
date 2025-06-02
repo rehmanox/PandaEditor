@@ -1,15 +1,15 @@
 <div id="toc">
   <ul style="list-style: none">
     <summary>
-      <h2>  PandaEditor is a powerful, open-source 3D development framework built on top of the Panda3D engine, designed to accelerate your game development, simulation, or visualization projects. With built-in support for C++ scripting and intuitive scene editing tools, PandaEditor enables rapid iteration and real-time feedback—bringing your ideas to life faster. </h2>
+      <h2>  PandaEditor is a powerful, open-source 3D development framework built on the Panda3D engine, designed to accelerate your games, simulations, or interactive visualizations. With intuitive scene editing tools and full support for C++ scripting — it’s built to help you iterate faster and bring your creative visions to life. </h2>
     </summary>
   </ul>
 </div>
 <p align="center">
-  <a href="https://www.patreon.com/codecreateplay"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white" /></a>
-  <a href="https://github.com/CodeCreatePlay/P3D-PandaEditor"><img src="https://img.shields.io/badge/Itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" /></a>
-  <a href="https://github.com/CodeCreatePlay/P3D-PandaEditor"><img src="https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" /></a>
-  <a href="https://github.com/CodeCreatePlay/P3D-PandaEditor"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" /></a>
+  <a href="https://github.com/rehmanx86/PandaEditor"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white" /></a>
+  <a href="https://github.com/rehmanx86/PandaEditor"><img src="https://img.shields.io/badge/Itch.io-FA5C5C?style=for-the-badge&logo=itchdotio&logoColor=white" /></a>
+  <a href="https://github.com/rehmanx86/PandaEditor"><img src="https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white" /></a>
+  <a href="https://github.com/rehmanx86/PandaEditor"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" /></a>
 </p>
 
 ## TableOfContents
@@ -73,7 +73,7 @@ src/
 ```
 
 ### Programming in PandaEditor
-Programming with PandaEditor requires a beginner-level understanding of C++. Users can write runtime scripts by inheriting from the `RuntimeScript` base class to update / change the state of the system and define object behaviors.  
+Programming with PandaEditor requires a beginner-level understanding of C++. Users can write scripts by inheriting from the `RuntimeScript` base class to update / change the state of the system and define object behaviors.  
 The `RuntimeScript` class provides direct access to core Panda3D and PandaEditor systems. It also offers several utility methods to simplify and enhance your scripting experience.
 
 > 💡 1. When a new project is created, a sample `RuntimeScript` is automatically generated — use it as a reference for structure and usage.  
@@ -151,7 +151,7 @@ protected:
 };
 ```
 
-**Editor scripts:** There are special types of `RuntimeScripts` called `EditorScripts` that execute in **Developer Mode** only, they will not be shipped along with the final executable. You can use them to create development tools or for debugging purposes.  
+**Editor scripts:** There are special types of `RuntimeScripts` called `EditorScripts` that are loaded in **Developer Mode** only, they will not be shipped along with the final executable. You can use them to create development tools or for debugging purposes.  
 To specify a script as `EditorScripts` prefix the class name with `Editor_` for example 'Editor_FoliageSys'.
 
 ### Editor and Game Modes
