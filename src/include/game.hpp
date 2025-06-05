@@ -13,6 +13,7 @@ class Game {
 public:
     explicit Game(Demon& demon);
     void init();
+    void on_evt_size();
     void on_evt(const std::string& event_name); // Pass string by const reference
 	
     // game_render and game_render_2D are the actual renders parented to engine.render

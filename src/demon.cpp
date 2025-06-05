@@ -16,7 +16,7 @@ Demon& Demon::get_instance() {
     return instance;
 }
 
-Demon::Demon() : game(*this) {
+Demon::Demon() : game(*this) {    
     // Load configuration
     std::string config_file = PathUtils::join_paths(
     PathUtils::get_executable_dir(),
@@ -81,9 +81,6 @@ Demon::Demon() : game(*this) {
 	update_task->set_sort(MAIN_TASK_SORT);
 	AsyncTaskManager::get_global_ptr()->add(update_task);
 	
-	// Add event hooks
-	engine.accept("window-event", [this]() { engine.on_evt_size(); } );
-
     // Loop through all tasks in the task manager
     auto task_mgr = AsyncTaskManager::get_global_ptr();
     AsyncTaskCollection tasks = task_mgr->get_tasks();
@@ -121,6 +118,9 @@ Demon::Demon() : game(*this) {
 
     dllLoader.load_script_dll(ed_functions, "game_script.dll", *this);
     
+    // Add event hooks
+	engine.accept("window-event", [this]() { engine.on_evt_size(); } );
+    
     // Others
 	_cleaned_up        = false;
 	_game_mode_enabled = false;
@@ -139,7 +139,7 @@ Demon::~Demon() {
             return AsyncTask::DS_done;
         }, "ScriptsUnloadTask"));
         
-        // exit game mode also creates a task to unload scripts with delay = 0,
+        // Exit game mode also creates a task to unload scripts with delay = 0,
         // we set delay = 1 for exit task so it executes after scripts unload task.
         exit_task->set_delay(1);
         AsyncTaskManager::get_global_ptr()->add(exit_task);
@@ -155,7 +155,13 @@ void Demon::start() {
         return;
     
     _is_started = true;
-
+    
+    // Send size events once so renders are
+    // scaled properly before first update
+    engine.on_evt_size();
+    game.on_evt_size();
+    
+    // Start the update
 	while (!engine.win->is_closed()) {
 		AsyncTaskManager::get_global_ptr()->poll();	
 	}
@@ -270,7 +276,7 @@ void Demon::enable_game_mode() {
     // load dlls
     dllLoader.load_script_dll(dll_functions, "game_script.dll", *this);
     
-    // enable
+    // Enable game mode
 	engine.trigger("game_mode_enabled");
 	std::cout << "Game mode enabled\n";
     _game_mode_enabled = true;
@@ -435,7 +441,7 @@ void Demon::imgui_update() {
     
 	this->p3d_imgui.new_frame_imgui();
     
-    // handle mouse
+    // Handle mouse
     MouseWatcher* mw = this->engine.mouse_watcher;
     if(mw->has_mouse()) {
         for (const ButtonHandle& button: this->p3d_imgui.btn_handles) {

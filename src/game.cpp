@@ -31,7 +31,6 @@ void Game::init() {
     render2D.set_depth_write(false);
     render2D.set_material_off(true);
     render2D.set_two_sided(true);
-    // render2D.reparent_to(demon.engine.render2D);
 	
     // Aspect 2D
     aspect2D = render2D.attach_new_node("GameAspect2d");
@@ -87,20 +86,22 @@ void Game::init() {
 	std::cout << "-- Game initialized successfully" << std::endl;
 }
 
+void Game::on_evt_size() {
+    auto size = demon.engine.get_size();
+
+    if (size.get_x() > 0 && size.get_y() > 0) {
+        pixel2D.set_scale(2.0 / size.get_x(), 1.0, 2.0 / size.get_y());
+    }
+    
+    float aspect_ratio = demon.engine.get_aspect_ratio();
+    if (aspect_ratio != 0) {
+        aspect2D.set_scale(1.0f / aspect_ratio, 1.0f, 1.0f);
+    }
+}
+
 // Handle events
 void Game::on_evt(const std::string& event_name) {
-    if (event_name == "window-event") {
-        auto size = demon.engine.get_size();
-
-        if (size.get_x() > 0 && size.get_y() > 0) {
-            pixel2D.set_scale(2.0 / size.get_x(), 1.0, 2.0 / size.get_y());
-        }
-		
-        float aspect_ratio = demon.engine.get_aspect_ratio();
-        if (aspect_ratio != 0) {
-            aspect2D.set_scale(1.0f / aspect_ratio, 1.0f, 1.0f);
-        }
-    }
+    if (event_name == "window-event") on_evt_size();
 }
 
 // Create a 3D display region
