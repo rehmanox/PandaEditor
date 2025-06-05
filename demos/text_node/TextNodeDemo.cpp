@@ -4,20 +4,20 @@
 
 class TextNodeDemo : public RuntimeScript {
 public:
-    TextNodeDemo(Demon& demon) : RuntimeScript(demon) {
+    TextNodeDemo(Demon& demon) : RuntimeScript(demon) {        
         // === Create a TextNode ===
         PT(TextNode) text_node = new TextNode("demo_text");
         
         // === Text Alignment ===
         text_node->set_align(TextNode::A_center);
         
-        // Other align types
+        // === Other align types ===
         // text_node->set_align(TextNode::A_left);
         // text_node->set_align(TextNode::A_right);
-        
+
         // === Set Text and Text Color ===
-        text_node->set_text("Every day in every way I am getting better and better"); // Set text
-        text_node->set_text_color(LColor(1, 0.2, 0.2, 1)); // Change text color
+        text_node->set_text("Every day in every way I am getting better and better."); // Set text
+        text_node->set_text_color(LColor(1.f, 1.f, 1.f, 1.f)); // Change text color
 
         // === Optional Font ===
         // You can load a custom font if needed
@@ -33,16 +33,17 @@ public:
         text_node->set_slant(0);
         
         // === Shadow ===
-        text_node->set_shadow_color(LColor(0, 0, 0, 1));  // Black shadow
-        text_node->set_shadow(0.025, 0.025);              // Offset shadow
+        text_node->set_shadow_color(LColor(0.0f, 0.0f, 0.2f, 1.0f));
+        text_node->set_shadow(0.025f, 0.025f); // Offset shadow
 
         // === Background Card (Text box) ===
-        text_node->set_card_color(LColor(0, 0, 0, 0.3));  // Semi-transparent black
-        text_node->set_card_as_margin(0.1, 0.1, 0.1, 0.1);
+        text_node->set_card_color(LColor(0.05f, 0.1f, 0.2f, 0.6f));  // Semi-transparent black
+        text_node->set_card_as_margin(0.1f, 0.1f, 0.1f, 0.1f);
         
         // === Frame Border ===
-        text_node->set_frame_color(LColor(0, 1, 0, 1));
-        text_node->set_frame_as_margin(0.1, 0.1, 0.1, 0.1);
+        text_node->set_frame_color(LColor(0.0f, 1.0f, 0.8f, 1.0f));
+        text_node->set_frame_as_margin(0.1f, 0.1f, 0.1f, 0.1f);
+        text_node->set_frame_line_width(1.5f);
         
         /*
             "text_node->set_card_as_margin" and "text_node->set_frame_as_margin" and specify
@@ -59,13 +60,13 @@ public:
         text_node->set_card_decal(false);
         
         // === Wrap text node into a NodePath and put it in scene graph ===
-        NodePath text_np = demon.engine.aspect2D.attach_new_node(text_node);
+        NodePath text_np = NodePath(text_node->generate());
+        text_np.reparent_to(game.aspect2D);
         
         // NodePath operations as usual
-        text_np.set_scale(0.15f);      // Uniform scale
-        text_np.set_pos(0, 0, 0.5f);   // X, Y, Z position in aspect2D
-        text_np.set_hpr(0, 0, 0);      // Rotate slightly for effect
-        
+        text_np.set_scale(0.2f);      // Uniform scale
+        text_np.set_pos(0.f, 0.f, 0.35f); // X, Y, Z position in aspect2D
+        text_np.set_hpr(0.f, 0.f, 0.f);     // Rotate slightly for effect
         
         // --------------------------------------------------------------------
         // Other useful options
