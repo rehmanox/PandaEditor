@@ -7,7 +7,17 @@ import zipfile
 import glob
 import re
 import shutil
+import argparse
 from pathlib import Path
+
+# setup command line arguments
+parser = argparse.ArgumentParser(
+    description="Additional build options."
+)
+parser.add_argument("--wx", required=False, type=int, default=0, help="Build wx?")
+args = parser.parse_args()
+
+BUILD_WX = args.wx
 
 # Detect OS and store in OS_TYPE
 os_system = platform.system()
@@ -19,12 +29,12 @@ elif os_system.startswith(("CYGWIN", "MINGW", "MSYS")) or os.name == "nt":
     OS_TYPE = "Windows"
 else:
     print(f"Unsupported OS: {os_system}")
-    input("Press 'Enter' to continue...") if sys.stdout.isatty() else None
+    input("Press 'Enter' to continue...\n") if sys.stdout.isatty() else None
     sys.exit(1)
 
 def pause_if_interactive():
     if sys.stdout.isatty():
-        input("Press 'Enter' to continue...")
+        input("Press 'Enter' to continue...\n")
 
 def check_command_success_status(*args):
     try:
@@ -65,72 +75,115 @@ def extract_zip(zip_file, destination):
 
 # Globals
 ROOT_DIR = os.getcwd()
-BUILD_TYPE = "Release"
-BUILD_DIR = None
-BUILD_TOOLS_DIR = os.path.join(ROOT_DIR, "build_tools")
+DEPENDENCIES_DIR = os.path.join(ROOT_DIR, "extras")
 THIRDPARTY_DIR = os.path.join(ROOT_DIR, "src", "thirdparty")
-DEMO_PROJECTS_DIR = os.path.join(ROOT_DIR, "demos")
-PROJECT_DIR = os.path.join(ROOT_DIR, "game")
-LOGGING_DIR = os.path.join(ROOT_DIR, "logs")
+LOGs_DIR = os.path.join(ROOT_DIR, "logs")
+BUILD_DIR = None
 
-USERS_PROJECTS = {}
 DEMO_PROJECTS  = {}
-DEMO_PROJECTS_DIR = os.path.join(Path.cwd(), "demos")
+DEMO_PROJECTS_DIR = os.path.join(ROOT_DIR, "demos")
+USERS_PROJECTS = {}
+USER_PROJECTS_DIR = os.path.join(ROOT_DIR, "game")
 
-MYCMAKE = None 
-IMGUI_VERSION = "v1.91.2"
+# Build related vars
+BUILD_TYPE = "Release"
 
+# Executable directory, name and path
 EXEC_DIR  = None
 EXEC_NAME = None
 EXEC_PATH = None
 
 # Ensure necessary directories exist
-for d in [LOGGING_DIR, THIRDPARTY_DIR, PROJECT_DIR, BUILD_TOOLS_DIR]:
+# wx build is optional, so we create it in configure_wx function
+for d in [DEPENDENCIES_DIR, THIRDPARTY_DIR, USER_PROJECTS_DIR, LOGs_DIR]:
     os.makedirs(d, exist_ok=True)
 
-export_functions_file = ""  # export functions text file
-export_functions = []      # names of functions exported as dll
+export_functions_file = ""  # DLL export functions file path
+export_functions = []       # DLL export function names
+
+def ensure_dependency(name, url, extract_to_dir, search_pattern=None):
+    if search_pattern is None:
+        search_pattern = f"{name.lower()}*"
+
+    candidates = glob.glob(os.path.join(DEPENDENCIES_DIR, search_pattern))
+    for candidate in candidates:
+        if os.path.isfile(candidate) and candidate.endswith((".zip", ".7z", ".tar.gz")):
+            print(f"Found compressed {name}: {os.path.basename(candidate)} — extracting...")
+            extract_zip(candidate, extract_to_dir)
+            return True
+
+    # No archive found, download
+    print(f"Downloading: {name}")
+    archive_name = f"{name.lower()}.zip"
+    final_path = os.path.join(DEPENDENCIES_DIR, archive_name)
+    partial_path = final_path + ".partial"
+
+    # Remove leftover from a failed download
+    if os.path.exists(partial_path):
+        print(f"Found incomplete download for {name}, deleting: {partial_path}")
+        os.remove(partial_path)
+
+    # Download to partial file
+    download(url, partial_path)
+
+    # Move to final filename after success
+    os.rename(partial_path, final_path)
+
+    print("Extracting...")
+    extract_zip(final_path, extract_to_dir)
+    print(f"{name} download completed successfully.\n")
+    return True
 
 def configure_cmake(config_file):
-    global MYCMAKE
-    candidates = glob.glob(os.path.join(BUILD_TOOLS_DIR, "cmake-*"))
-    cmake_dir = next((d for d in candidates if os.path.isdir(d)), None)
-    if cmake_dir and os.path.isfile(os.path.join(cmake_dir, "bin", "cmake.exe")):
-        MYCMAKE = os.path.join(cmake_dir, "bin", "cmake.exe")
+    print("Configuring Cmake")
+    global cmake
+    cmake = None
+    
+    cmake_dir = os.path.join(ROOT_DIR, "cmake")
+    if not os.path.exists(cmake_dir):
+        os.mkdir(cmake_dir)
 
-    if not MYCMAKE:
-        print("Downloading CMake.")
-        url = "https://github.com/Kitware/CMake/releases/download/v3.30.7/cmake-3.30.7-windows-x86_64.zip"
-        download(url, "cmake.zip")
+    cmake_exe_dir = None # cmake executable directory
+    
+    def find_cmake():
+        global cmake
+        nonlocal cmake_exe_dir
+        candidates = glob.glob(os.path.join(ROOT_DIR, "cmake", "cmake-*"))
+        for d in candidates:
+            cmake_exe = os.path.join(d, "bin", "cmake.exe")
+            if os.path.isdir(d) and os.path.isfile(cmake_exe):
+                cmake = cmake_exe
+                cmake_exe_dir = os.path.join(d, "bin")
+                return
+        
+    find_cmake()
 
-        print("Extracting...")
-        extract_zip("cmake.zip", BUILD_TOOLS_DIR)
+    if not cmake:
+        ensure_dependency(
+            name="cmake",
+            url="https://github.com/Kitware/CMake/releases/download/v3.30.7/cmake-3.30.7-windows-x86_64.zip",
+            extract_to_dir=cmake_dir)   
+        find_cmake()
 
-        candidates = glob.glob(os.path.join(BUILD_TOOLS_DIR, "cmake-*"))
-        cmake_dir = next((d for d in candidates if os.path.isdir(d)), None)
-
-        if cmake_dir and os.path.isfile(os.path.join(cmake_dir, "bin", "cmake.exe")):
-            MYCMAKE = os.path.join(cmake_dir, "bin", "cmake.exe")
-        else:
-            print("Error: Unable to find CMake.")
-            pause_if_interactive()
-            sys.exit(1)
-
-        os.remove("cmake.zip")
-        print("Deleted archive: cmake.zip")
-        print("CMake download completed successfully.\n")
-
+    if not cmake:
+        print("Error: Unable to find CMake.")
+        pause_if_interactive()
+        sys.exit(1)
+        
+    # Temporarily, add cmake path to system path
+    os.environ["PATH"] = cmake_exe_dir + os.pathsep + os.environ["PATH"]
+    
+    # Configure CMake project if needed
     if not os.path.isfile(config_file):
         print("CMake configuration file not found.")
-        panda3d_path = input("Enter the full path to Panda3D (e.g., C:/Panda3D-1.10.15-x64 or /opt/panda3d): ")
-        panda3d_path = panda3d_path.replace("\\", "/")
+        panda3d_path = input("Enter the full path to Panda3D (e.g., C:/Panda3D-1.10.15-x64 or /opt/panda3d): ").replace("\\", "/")
 
         if not os.path.isdir(panda3d_path):
             print(f"Error: The provided Panda3D path '{panda3d_path}' does not exist. Exiting.")
             pause_if_interactive()
             sys.exit(1)
 
-        print("Creating CMake configuration file...\n")
+        print("Creating CMake configuration file...")
         with open(config_file, "w") as f:
             f.write(f'''# Path to the root installation of Panda3D
 set(PANDA3D_ROOT "{panda3d_path}" CACHE STRING "Path to the Panda3D installation")
@@ -141,18 +194,16 @@ set(PANDA3D_LIBRARY_DIR "${{PANDA3D_ROOT}}/lib")
 ''')
 
 def configure_imgui():
-    # Download and extract ImGui if not already present
+    print("Configuring ImGUI")
     imgui_dir = os.path.join(THIRDPARTY_DIR, "imgui")
 
     if not os.path.isdir(imgui_dir):
-        print(f"Downloading ImGui ({IMGUI_VERSION}).")
-        url = f"https://github.com/ocornut/imgui/archive/refs/tags/{IMGUI_VERSION}.zip"
-        download(url, "imgui.zip")
+        ensure_dependency(
+            name="ImGui",
+            url=f"https://github.com/ocornut/imgui/archive/refs/tags/v1.91.2.zip",
+            extract_to_dir=DEPENDENCIES_DIR)
 
-        print("Extracting...")
-        extract_zip("imgui.zip", THIRDPARTY_DIR)
-
-        found = next((d for d in glob.glob(os.path.join(THIRDPARTY_DIR, "imgui-*")) if os.path.isdir(d)), None)
+        found = next((d for d in glob.glob(os.path.join(DEPENDENCIES_DIR, "imgui-*")) if os.path.isdir(d)), None)
         if found:
             shutil.move(found, imgui_dir)
         else:
@@ -160,8 +211,52 @@ def configure_imgui():
             pause_if_interactive()
             sys.exit(1)
 
-        os.remove("imgui.zip")
-        print(f"Deleted archive: {IMGUI_VERSION}.zip")
+def configure_wx():
+    print("Configuring Wx")
+
+    wx_dir = os.path.join(ROOT_DIR, "wx")
+    wx_src_path = os.path.join(wx_dir, "wxWidgets-3.3.0")  # wx-source code path
+    
+    def test_wx(no_msg=False):
+        test_executable = os.path.join(wx_dir, "test_app", "build", "Release", "wx-example.exe" if os.name == 'nt' else "wx-example")
+        if os.path.isfile(test_executable):
+            try:
+                # print(f"Running test wx-executable: {test_executable}")
+                subprocess.run([test_executable], check=True)
+                # print("WxWidgets executable ran successfully.")
+                return True
+            except subprocess.CalledProcessError as e:
+                if not no_msg:
+                    print("wxWidgets test executable failed to run. Has wxWidgets built correctly?")
+                return False
+        else:
+            if not no_msg:
+                print("wxWidgets test executable failed to run. Has wxWidgets built correctly?")
+            return False
+    
+    if not os.path.isdir(wx_src_path):
+        os.makedirs(path, exist_ok=True)
+        ensure_dependency(
+            name="wxWidgets",
+            url="https://github.com/wxWidgets/wxWidgets/releases/download/v3.3.0/wxWidgets-3.3.0.zip",
+            extract_to_dir=path)
+
+    if not test_wx(no_msg = True):
+        # Add the directory containing your local 'wx' to the front of sys.path
+        sys.path.insert(0, WX_DIR)
+        from buildWx import build as build_wx
+        from buildTestWxApp import build as build_test_wx_app
+        
+        # Start build
+        print("\nStarting to build wx....")
+        build_wx()
+
+        print("Starting to build test wx app....")
+        build_test_wx_app()
+
+    if not test_wx():
+        pause_if_interactive()
+        sys.exit(1)
 
 def build_projects_info():
     base_dir = os.getcwd()
@@ -291,10 +386,12 @@ def set_directories():
     global EXEC_DIR
     global EXEC_NAME
     global EXEC_PATH
+    
     if PROJECT_NAME:
         BUILD_DIR = Path.cwd() / "builds" / PROJECT_NAME
     else:
         BUILD_DIR = Path.cwd() / "builds" / "default-project"
+        
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     EXEC_DIR  = BUILD_DIR / "Release"
     EXEC_NAME = "game.exe" if OS_TYPE == "Windows" else "game"
@@ -396,17 +493,17 @@ def run_cmake_config():
     normalized_project_path = Path(PROJECT_PATH).as_posix()
     project_option = f"-DPROJECT_PATH={normalized_project_path}"
 
-    build_log = LOGGING_DIR + "/build-log.log"
+    build_log = LOGs_DIR + "/build-log.log"
     with open(build_log, 'w') as f:
         f.write("Starting Configuration with CMake...\n")
-    log_cmake_output(build_log, MYCMAKE, f"-B{BUILD_DIR}", "-S.", *cmake_arch_option, project_option)
+    log_cmake_output(build_log, cmake, f"-B{BUILD_DIR}", "-S.", *cmake_arch_option, project_option)
 
 def run_cmake_build():
-    build_log = LOGGING_DIR + "/build-log.log"
+    build_log = LOGs_DIR + "/build-log.log"
     with open(build_log, 'a') as f:
         f.write("\n\nStarting Build...\n")
 
-    log_cmake_output(build_log, MYCMAKE, "--build", str(BUILD_DIR), "--config", "Release")
+    log_cmake_output(build_log, cmake, "--build", str(BUILD_DIR), "--config", "Release")
 
 def create_runtime_config():
     release_dir = BUILD_DIR / "Release"
@@ -414,7 +511,7 @@ def create_runtime_config():
 
     config = {
         "working_dir": str(Path.cwd().resolve().as_posix()),
-        "project_dir": str(PROJECT_PATH.resolve().as_posix()),
+        "USER_PROJECTS_DIR": str(PROJECT_PATH.resolve().as_posix()),
         "shared_assets": str((Path.cwd() / "demos" / "_assets").resolve().as_posix()),
         "run_mode": "release"
     }
@@ -438,15 +535,23 @@ def run_executable():
         input("Press 'Enter' to continue...")
         sys.exit(1)
 
+def finalize():
+    # Write the plain-text list of exported function names generated 
+    # in 'generate_export_functions'. We write them at the end, 
+    # after build directories have been created.
+    with export_functions_file.open("w", encoding="utf-8") as f:
+        f.write("\n".join(export_functions))
 
 # start
-print("\nPandaEditor Project Configuration and Build System.")
-print("Collecting dependencies...")
+print("\nPandaEditor Project Configuration and Build System.\n")
+print("Starting to configure dependencies...")
 
 configure_cmake("config.cmake")
 configure_imgui()
+if BUILD_WX == 1:
+    configure_wx()
 
-print("Dependencies collected, Starting build...\n")
+print("Dependencies configured, Starting build...\n")
 
 build_projects_info()
 get_user_project()
@@ -456,13 +561,7 @@ generate_export_functions()
 run_cmake_config()
 run_cmake_build()
 create_runtime_config()
-
-# Write the plain-text list of exported function names generated 
-# in 'generate_export_functions'.
-# We write them at the end, after build directories have
-# been created.
-with export_functions_file.open("w", encoding="utf-8") as f:
-    f.write("\n".join(export_functions))
+finalize()
 
 # run the executable
 run_executable()

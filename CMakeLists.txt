@@ -13,6 +13,9 @@ else()
     message(WARNING "PandaEditor is designed for MSVC on Windows.")
 endif()
 
+# Optional
+option(BUILD_WX "Enable debug-specific compiler flags" OFF)
+
 # ---------------- DIRECTORY SETUP ---------------- #
 set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(THIRDPARTY_DIR ${SOURCE_DIR}/thirdparty)
@@ -51,6 +54,13 @@ else()
     message(FATAL_ERROR "ImGui not found. Ensure it's in '${IMGUI_DIR}'.")
 endif()
 
+# ---------------- WXWIDGETS SETUP ---------------- #
+# Assuming wxWidgets was built and installed to `${CMAKE_SOURCE_DIR}/wx/wx-install`
+if(BUILD_WX)
+    set(wxWidgets_DIR "${CMAKE_SOURCE_DIR}/wx/wx-install/lib/cmake/wxWidgets")
+    find_package(wxWidgets CONFIG REQUIRED COMPONENTS core base)
+endif()
+
 # ---------------- SHARED ENGINE LIBRARY ---------------- #
 file(GLOB_RECURSE ENGINE_SOURCE_FILES ${SOURCE_DIR}/*.cpp)
 list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX "${THIRDPARTY_DIR}/.*")
@@ -59,22 +69,44 @@ list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX ${SOURCE_DIR}/main.cpp)
 
 add_library(engine_lib STATIC ${ENGINE_SOURCE_FILES} ${IMGUI_SOURCES})
 
-target_include_directories(engine_lib PRIVATE 
-    ${SOURCE_DIR}/include
-    ${SOURCE_DIR}/utils/include
-    ${SOURCE_DIR}/imgui
-    ${PANDA3D_INCLUDE_DIR}
-    ${IMGUI_DIR}
-)
+if(BUILD_WX)
+    target_include_directories(engine_lib PRIVATE 
+        ${SOURCE_DIR}/include
+        ${SOURCE_DIR}/utils/include
+        ${SOURCE_DIR}/imgui
+        ${PANDA3D_INCLUDE_DIR}
+        ${IMGUI_DIR}
+        ${wxWidgets_INCLUDE_DIRS}
+    )
+else()
+    target_include_directories(engine_lib PRIVATE 
+        ${SOURCE_DIR}/include
+        ${SOURCE_DIR}/utils/include
+        ${SOURCE_DIR}/imgui
+        ${PANDA3D_INCLUDE_DIR}
+        ${IMGUI_DIR}
+    )
+endif()
 
 # Link against Panda3D libraries
-target_link_libraries(engine_lib PRIVATE 
-    ${PANDA_FRAMEWORK} 
-    ${PANDA_LIB} 
-    ${PANDAEXPRESS_LIB} 
-    ${DTOOL_LIB} 
-    ${DTOOLCONFIG_LIB}
-)
+if(BUILD_WX)
+    target_link_libraries(engine_lib PRIVATE 
+        ${PANDA_FRAMEWORK} 
+        ${PANDA_LIB} 
+        ${PANDAEXPRESS_LIB} 
+        ${DTOOL_LIB} 
+        ${DTOOLCONFIG_LIB}
+        ${wxWidgets_LIBRARIES}
+    )
+else()
+    target_link_libraries(engine_lib PRIVATE 
+        ${PANDA_FRAMEWORK} 
+        ${PANDA_LIB} 
+        ${PANDAEXPRESS_LIB} 
+        ${DTOOL_LIB} 
+        ${DTOOLCONFIG_LIB}
+    )
+endif()
 
 # ---------------- GAME EXECUTABLE ---------------- #
 set(MAIN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
@@ -136,8 +168,6 @@ file(WRITE "${CMAKE_BINARY_DIR}/config.txt.in" "@PROJECT_PATH@")
 
 # Expand variable to actual value in config.txt
 configure_file("${CMAKE_BINARY_DIR}/config.txt.in" "${CMAKE_BINARY_DIR}/config.txt")
-
-
 
 # ---------------- OPTIONAL POST-BUILD ---------------- #
 option(ENABLE_POST_BUILD "Run the game after building" OFF)
