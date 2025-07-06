@@ -17,12 +17,13 @@ endif()
 option(BUILD_WX "Enable debug-specific compiler flags" OFF)
 
 # ---------------- DIRECTORY SETUP ---------------- #
-set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(THIRDPARTY_DIR ${SOURCE_DIR}/thirdparty)
-set(SCRIPTS_DIR ${PROJECT_PATH})
+set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
+set(THIRDPARTY_DIR ${SRC_DIR}/thirdparty)
+set(STOCK_SCRIPTS_DIR ${CMAKE_SOURCE_DIR}/stock/scripts)
+set(GAME_SCRIPTS_DIR ${PROJECT_PATH})
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config.cmake")
-    include("${CMAKE_CURRENT_SOURCE_DIR}/config.cmake")
+if(EXISTS "${CMAKE_SOURCE_DIR}/config.cmake")
+    include("${CMAKE_SOURCE_DIR}/config.cmake")
 else()
     message(FATAL_ERROR "Missing config.cmake. Please create it.")
 endif()
@@ -62,27 +63,27 @@ if(BUILD_WX)
 endif()
 
 # ---------------- SHARED ENGINE LIBRARY ---------------- #
-file(GLOB_RECURSE ENGINE_SOURCE_FILES ${SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE ENGINE_SOURCE_FILES ${SRC_DIR}/*.cpp)
 list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX "${THIRDPARTY_DIR}/.*")
 list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX ".*runtimeScript.cpp$")
-list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX ${SOURCE_DIR}/main.cpp)
+list(FILTER ENGINE_SOURCE_FILES EXCLUDE REGEX ${SRC_DIR}/main.cpp)
 
 add_library(engine_lib STATIC ${ENGINE_SOURCE_FILES} ${IMGUI_SOURCES})
 
 if(BUILD_WX)
     target_include_directories(engine_lib PRIVATE 
-        ${SOURCE_DIR}/include
-        ${SOURCE_DIR}/utils/include
-        ${SOURCE_DIR}/imgui
+        ${SRC_DIR}/include
+        ${SRC_DIR}/utils/include
+        ${SRC_DIR}/imgui
         ${PANDA3D_INCLUDE_DIR}
         ${IMGUI_DIR}
         ${wxWidgets_INCLUDE_DIRS}
     )
 else()
     target_include_directories(engine_lib PRIVATE 
-        ${SOURCE_DIR}/include
-        ${SOURCE_DIR}/utils/include
-        ${SOURCE_DIR}/imgui
+        ${SRC_DIR}/include
+        ${SRC_DIR}/utils/include
+        ${SRC_DIR}/imgui
         ${PANDA3D_INCLUDE_DIR}
         ${IMGUI_DIR}
     )
@@ -113,9 +114,9 @@ set(MAIN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 add_executable(game ${MAIN_SCRIPT})
 
 target_include_directories(game PRIVATE 
-    ${SOURCE_DIR}/include
-    ${SOURCE_DIR}/utils/include
-    ${SOURCE_DIR}/imgui
+    ${SRC_DIR}/include
+    ${SRC_DIR}/utils/include
+    ${SRC_DIR}/imgui
     ${PANDA3D_INCLUDE_DIR}
     ${IMGUI_DIR}
 )
@@ -123,28 +124,32 @@ target_include_directories(game PRIVATE
 target_link_libraries(game PRIVATE engine_lib)
 
 # ---------------- SCRIPT DLL COMPILATION ---------------- #
-file(GLOB_RECURSE SCRIPT_FILES ${SCRIPTS_DIR}/*.cpp)
-list(APPEND SCRIPT_FILES ${SOURCE_DIR}/runtimeScript.cpp)
-list(FILTER SCRIPT_FILES EXCLUDE REGEX ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+file(GLOB_RECURSE GAME_SCRIPTS ${GAME_SCRIPTS_DIR}/*.cpp)
+file(GLOB_RECURSE STOCK_SCRIPTS ${STOCK_SCRIPTS_DIR}/*.cpp)
+
+list(APPEND GAME_SCRIPTS ${STOCK_SCRIPTS})
+list(APPEND GAME_SCRIPTS ${SRC_DIR}/runtimeScript.cpp)
+list(FILTER GAME_SCRIPTS EXCLUDE REGEX ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 
 # Print all script files
 message(STATUS "Script files included in game_script.dll:")
-foreach(FILE ${SCRIPT_FILES})
+foreach(FILE ${GAME_SCRIPTS})
     message(STATUS " - ${FILE}")
 endforeach()
 
-if(SCRIPT_FILES)
-    add_library(game_script SHARED ${SCRIPT_FILES})
+if(GAME_SCRIPTS)
+    add_library(game_script SHARED ${GAME_SCRIPTS})
 
     # Define DLL export macro
     target_compile_definitions(game_script PRIVATE GAME_DLL_EXPORTS)
 
     target_include_directories(game_script PRIVATE 
-        ${SOURCE_DIR}/include
-        ${SOURCE_DIR}/utils/include
-        ${SOURCE_DIR}/imgui
+        ${SRC_DIR}/include
+        ${SRC_DIR}/utils/include
+        ${SRC_DIR}/imgui
         ${PANDA3D_INCLUDE_DIR}
         ${IMGUI_DIR}  
+        ${STOCK_SCRIPTS_DIR}
     )
         
     # Link against Panda3D libraries
@@ -159,7 +164,7 @@ if(SCRIPT_FILES)
     # Link against shared engine library
     target_link_libraries(game_script PRIVATE engine_lib)
 else()
-    message(WARNING "No script files found in ${SCRIPTS_DIR}. No DLLs will be built.")
+    message(WARNING "No script files found in ${GAME_SCRIPTS_DIR}. No DLLs will be built.")
 endif()
 
 # ---------------- Write Config file ---------------- #

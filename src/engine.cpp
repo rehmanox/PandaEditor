@@ -332,13 +332,6 @@ void Engine::remove_event_listener(const std::string& listener_name) {
                 std::strlen(event_listener.listener)) == 0;
            }),
         events_listeners.end());
-        
-    // Check if any entry was removed
-    // if (events_listeners.size() < initial_size) {
-        // std::cout << "Listener '" << listener_name << "' removed successfully.\n";
-    // } else {
-        // std::cout << "Listener '" << listener_name << "' not found.\n";
-    // }
 }
 
 void Engine::clear_event_listeners() {

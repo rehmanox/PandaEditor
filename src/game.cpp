@@ -14,7 +14,7 @@
 #include "demon.hpp"
 
 // Constructor
-Game::Game(Demon& demon) : demon(demon) { }
+Game::Game(Demon& demon) : demon(demon) {}
 
 // Initialize the game
 void Game::init() {

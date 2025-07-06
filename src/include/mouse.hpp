@@ -6,6 +6,11 @@
 #include <string>
 
 class Engine;
+extern const int MOUSE_ONE;
+extern const int MOUSE_TWO;
+extern const int MOUSE_THREE;
+extern const int MOUSE_FOUR;
+extern const int MOUSE_FIVE;
 
 class Mouse {
 public:
@@ -17,7 +22,7 @@ public:
 	void toggle_force_relative_mode();
     bool has_modifier(int modifier) const;
     bool has_mouse() const;
-	bool is_button_down(const std::string& buttonName) const;
+	bool is_button_down(int btn_idx) const;
 
     // Getters
 	float get_x()  const;
@@ -31,7 +36,7 @@ public:
 	
 	bool is_mouse_centered() const;
 	
-	const std::unordered_map<std::string, bool>& get_mouse_buttons() const;
+	const std::unordered_map<int, bool>& get_mouse_buttons() const;
 	
 	// Setters
 	void set_modifier(int index);
@@ -53,7 +58,7 @@ private:
 	bool _force_relative_mode;
 	
 	Engine& _engine;
-    std::unordered_map<std::string, bool> _mouse_buttons;
+    std::unordered_map<int, bool> _mouse_buttons;
     std::vector<int> _modifiers;
 };
 

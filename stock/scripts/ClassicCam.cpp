@@ -1,22 +1,21 @@
 #include <unordered_map>
 #include <nodePath.h>
 
-class CameraController {
+class ClassicCam {
 public:
-    CameraController(NodePath& target_np, NodePath& cam) 
-        : target_np(target_np),
-          camera(cam)
-    {}
+    ClassicCam(NodePath& cam, NodePath& target_np) :
+        camera(cam),
+        target_np(target_np) {}
 
     void init()
     {
         // Create a floater object, which floats 2 units above Ralph
         floater = NodePath("CamLookAtTarget");
         floater.reparent_to(target_np);
-        floater.set_z(2.0f);
+        floater.set_z(1.5f);
 
         // Set an initial position for the camera
-        camera.set_pos(target_np.get_x(), target_np.get_y() - 20, 12.5);
+        camera.set_pos(target_np.get_x(), target_np.get_y() - 20.0f, 12.5f);
 
         // Make the camera look at the floater above Ralph's head
         camera.look_at(floater);

@@ -19,19 +19,19 @@ public:
     // game_render and game_render_2D are the actual renders parented to engine.render
     // render and render_2D are meant to meant to meant to nodepaths loaded at runtime 
     // and they will be cleaned as soon as 'level_script' is unloaded.
-    NodePath               game_render;
-    NodePath               render;
+    NodePath          game_render;
+    NodePath          render;
     
-    NodePath               game_render_2D;
-    NodePath               render2D;
-    NodePath               aspect2D;
-    NodePath               pixel2D;
-    NodePath               main_cam;
-    NodePath               cam2D;
+    NodePath          game_render_2D;
+    NodePath          render2D;
+    NodePath          aspect2D;
+    NodePath          pixel2D;
+    NodePath          main_cam;
+    NodePath          cam2D;
     
-    PT(DisplayRegion)      dr3D;
-    PT(DisplayRegion)      dr2D;
-    PT(MouseWatcher)       mouse_watcher;
+    PT(DisplayRegion) dr3D;
+    PT(DisplayRegion) dr2D;
+    PT(MouseWatcher)  mouse_watcher;
 
 private:
     Demon& demon;

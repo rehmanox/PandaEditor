@@ -98,11 +98,11 @@ void SceneCam::update() {
 
     delta_speed = move_speed * ClockObject::get_global_clock()->get_dt();
 
-    if (engine.mouse.is_button_down("mouse1")) {
+    if (engine.mouse.is_button_down(MOUSE_ONE)) {
         orbit(LVecBase2f(engine.mouse.get_dx() * delta_speed, engine.mouse.get_dy() * delta_speed));
-    } else if (engine.mouse.is_button_down("mouse2")) {
+    } else if (engine.mouse.is_button_down(MOUSE_TWO)) {
         move(LVecBase3f(engine.mouse.get_dx() * delta_speed, 0, -engine.mouse.get_dy() * delta_speed));
-    } else if (engine.mouse.is_button_down("mouse3")) {
+    } else if (engine.mouse.is_button_down(MOUSE_THREE)) {
         move(LVecBase3f(0, -engine.mouse.get_dx() * delta_speed, 0));
     }
 

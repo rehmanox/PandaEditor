@@ -7,6 +7,12 @@
 #include "engine.hpp"
 #include "mouse.hpp"
 
+const int MOUSE_ONE   = MouseButton::one().get_index();
+const int MOUSE_TWO   = MouseButton::two().get_index();
+const int MOUSE_THREE = MouseButton::three().get_index();
+const int MOUSE_FOUR  = MouseButton::four().get_index();
+const int MOUSE_FIVE  = MouseButton::five().get_index();
+
 Mouse::Mouse(Engine& _engine) : _engine(_engine) {}
 
 void Mouse::initialize() {
@@ -16,19 +22,20 @@ void Mouse::initialize() {
 	_engine.accept("control-up", [this]() { this->clear_modifier(CTRL_KEY_IDX); });
 	
 	// Initialize mouse button states
-    _mouse_buttons[MouseButton::one().get_name()]   = false;
-    _mouse_buttons[MouseButton::two().get_name()]   = false;
-    _mouse_buttons[MouseButton::three().get_name()] = false;
-    _mouse_buttons[MouseButton::four().get_name()]  = false;
-    _mouse_buttons[MouseButton::five().get_name()]  = false;
+    _mouse_buttons[MOUSE_ONE]   = false;
+    _mouse_buttons[MOUSE_TWO]   = false;
+    _mouse_buttons[MOUSE_THREE] = false;
+    _mouse_buttons[MOUSE_FOUR]  = false;
+    _mouse_buttons[MOUSE_FIVE]  = false;
 }
 
 void Mouse::update() {
     if (!_engine.mouse_watcher->has_mouse())
         return;
 
-    for (auto& btn : _mouse_buttons)
+    for (auto& btn : _mouse_buttons) {
         _mouse_buttons[btn.first] = _engine.mouse_watcher->is_button_down(btn.first);
+    }
 
     // Get pointer from screen, calculate delta
     const MouseData _m_data = _engine.win->get_pointer(0);
@@ -80,8 +87,8 @@ bool Mouse::has_mouse() const {
     return _engine.mouse_watcher->has_mouse();
 }
 
-bool Mouse::is_button_down(const std::string& buttonName) const {
-    auto it = _mouse_buttons.find(buttonName);
+bool Mouse::is_button_down(int btn_idx) const {
+    auto it = _mouse_buttons.find(btn_idx);
     return (it != _mouse_buttons.end()) ? it->second : false;
 }
 
@@ -105,7 +112,7 @@ bool Mouse::is_mouse_centered() const {
 	return _force_relative_mode || (_current_mouse_mode == WindowProperties::M_relative);
 }
 
-const std::unordered_map<std::string, bool>& Mouse::get_mouse_buttons() const { 
+const std::unordered_map<int, bool>& Mouse::get_mouse_buttons() const { 
 	return _mouse_buttons; 
 }
 

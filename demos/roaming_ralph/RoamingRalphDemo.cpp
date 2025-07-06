@@ -6,45 +6,56 @@
 #include <lpoint3.h>
 #include <nodePath.h>
 #include <texturePool.h>
-#include <collisionRay.h>
-#include <collisionNode.h>
 #include <collisionTraverser.h>
-#include <collisionHandlerQueue.h>
-#include <collideMask.h>
 
 #include "runtimeScript.hpp"
 #include "CharacterController.cpp"
-#include "CharacterCollisionHandler.cpp"
-#include "CameraController.cpp"
+#include "ClassicCam.cpp"
+#include "ThirdPersonCam.cpp"
 #include "CameraCollisionHandler.cpp"
+#include "pathUtils.hpp"
 
-const std::string environment_path = "Level.egg";
-const std::string ralph_path       = "ralph.egg.pz";
-const std::string ralph_anims_path = "ralph-run.egg.pz";
+const std::string environment_path = PathUtils::to_os_specific("models/Level.egg");
+const std::string ralph_path       = PathUtils::to_os_specific("models/ralph.egg.pz");
+const std::string ralph_anims_path = PathUtils::to_os_specific("models/ralph-run.egg.pz");
+
+enum CamType {
+    Classic,
+    ThirdPerson,
+    RTS
+};
 
 class RoamingRalphDemo : public RuntimeScript {
 public:
     RoamingRalphDemo(Demon& demon) :
         RuntimeScript(demon),
-        camera_controller(ralph, game.main_cam),
+        classic_cam(game.main_cam, ralph),
+        third_person_cam(game.main_cam, ralph, mouse),
         camera_collision_handler(ralph, c_trav),
-        character_controller(ralph),
-        character_collision_handler(ralph, c_trav) {		
+        character_controller(ralph, c_trav) {	
 
-        // load stuff
-        load_world();
-        load_actor();
+        // load environment
+        environment = resource_manager.load_model(environment_path);
+        environment.reparent_to(game.render);
+        environment.set_pos(LPoint3(0.0f, 0.0f, 0.0f));
 		
-        std::vector<NodePath> anims = load_actor_anims();
+        // ------------------------------------------------------------------------------ //
+        // --------------------------- Setup Character Controller ----------------------- //
+        // ------------------------------------------------------------------------------ //
+        ralph = resource_manager.load_model(ralph_path);
+        ralph.reparent_to(game.render);
+        ralph.set_scale(0.5f);
+        
+        std::vector<NodePath> anims = { resource_manager.load_model(ralph_anims_path) };
         LPoint3 start_pos = environment.find("**/Start_Pos").get_pos();
+        character_controller.init(anims, start_pos);
 
-        // Take ralph to the starting position
-        ralph.set_pos(start_pos);
-
+        // ------------------------------------------------------------------------------ //
+        // ---------------------------- Setup Camera Controller ------------------------ //
+        // ------------------------------------------------------------------------------ //
         // Initialize
-        character_controller.init(anims);
-        character_collision_handler.init(start_pos);
-        camera_controller.init();
+        classic_cam.init();
+        third_person_cam.init();
         camera_collision_handler.init();
         
         // Create a key map and register keys to their corresponding events
@@ -53,17 +64,33 @@ public:
         // Finalize
         // Update at least once before the first 'RoamingRalphDemoUpdate' task update        
         c_trav.traverse(game.render);
-        character_controller.update(dt, input_map);
-        character_collision_handler.update(game.render);
-        camera_controller.update(dt, input_map);
+        character_controller.update(dt, game.render, input_map);
+        update_cam();
     }
 
 protected:
-    void on_update(const PT(AsyncTask)&) {
+    void on_update(const PT(AsyncTask)&)
+    {
         c_trav.traverse(game.render);
-        character_controller.update(dt, input_map);
-        character_collision_handler.update(game.render);
-        camera_controller.update(dt, input_map);
+        character_controller.update(dt, game.render, input_map);
+        update_cam();
+    }
+    
+    void update_cam()
+    {
+        switch (cam_type)
+        {
+            case Classic:
+                classic_cam.update(dt, input_map);
+                break;
+            case ThirdPerson:
+                third_person_cam.update(dt);
+                break;
+            case RTS:
+                break;
+            default:
+                classic_cam.update(dt, input_map);;
+        }
     }
 
 	void on_event(const std::string& event_name)
@@ -73,10 +100,10 @@ protected:
 
 private:
 	// Character and camera controller related classes
-    CharacterController       character_controller;
-    CharacterCollisionHandler character_collision_handler;
-    CameraController          camera_controller;
-    CameraCollisionHandler    camera_collision_handler;
+    CharacterController    character_controller;
+    ClassicCam             classic_cam;
+    ThirdPersonCam         third_person_cam;
+    CameraCollisionHandler camera_collision_handler;
 
     // Environment and character models
     NodePath environment;
@@ -85,33 +112,13 @@ private:
     // Global
     CollisionTraverser c_trav;
     
-    // Input handling
-    std::unordered_map<std::string, std::pair<std::string, bool>> buttons_map;
-
-	
-    void load_world()
-    {
-        environment = resource_manager.load_model(environment_path);
-        environment.reparent_to(game.render);
-        environment.set_pos(LPoint3(0.0f, 0.0f, 0.0f));
-    }
-
-    void load_actor()
-    {
-        // load character model
-        ralph = resource_manager.load_model(ralph_path);
-        ralph.reparent_to(game.render);
-        ralph.set_scale(0.5f);
-    }
-    
-    std::vector<NodePath> load_actor_anims() const
-    {
-        NodePath walk_anim = resource_manager.load_model(ralph_anims_path);
-        return {walk_anim};
-    }
-
+    // Other
+    enum CamType cam_type = ThirdPerson;
+        
     void register_keys()
     {
+        std::unordered_map<std::string, std::pair<std::string, bool>> buttons_map;
+        
         buttons_map["a"] = {"left",      true};
         buttons_map["d"] = {"right",     true};
         buttons_map["w"] = {"forward",   true};

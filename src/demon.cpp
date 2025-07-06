@@ -156,8 +156,8 @@ void Demon::start() {
     
     _is_started = true;
     
-    // Send size events once so renders are
-    // scaled properly before first update
+    // Call size event handlers to scale
+    // renders properly, before first update
     engine.on_evt_size();
     game.on_evt_size();
     
