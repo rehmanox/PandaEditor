@@ -8,7 +8,6 @@ import glob
 import re
 import shutil
 import argparse
-from pathlib import Path
 
 # setup command line arguments
 parser = argparse.ArgumentParser(
@@ -83,7 +82,7 @@ BUILD_DIR = None
 DEMO_PROJECTS  = {}
 DEMO_PROJECTS_DIR = os.path.join(ROOT_DIR, "demos")
 USERS_PROJECTS = {}
-USER_PROJECTS_DIR = os.path.join(ROOT_DIR, "game")
+USER_PROJECTS_DIR = os.path.join(ROOT_DIR, "projects")
 
 # Build related vars
 BUILD_TYPE = "Release"
@@ -95,7 +94,13 @@ EXEC_PATH = None
 
 # Ensure necessary directories exist
 # wx build is optional, so we create it in configure_wx function
-for d in [DEPENDENCIES_DIR, THIRDPARTY_DIR, USER_PROJECTS_DIR, LOGs_DIR]:
+for d in [
+    DEPENDENCIES_DIR,
+    THIRDPARTY_DIR,
+    USER_PROJECTS_DIR,
+    os.path.join(ROOT_DIR, "builds"),
+    LOGs_DIR]:
+    
     os.makedirs(d, exist_ok=True)
 
 export_functions_file = ""  # DLL export functions file path
@@ -259,20 +264,21 @@ def configure_wx():
         sys.exit(1)
 
 def build_projects_info():
-    base_dir = os.getcwd()
-
     annotations = {
-        "game": "  # Main directory for user-defined projects",
-        "demos": " # Directory for demo projects",
-        "builds": "# Directory for build output"
+        "projects": "# Main directory for user-defined projects",
+        "demos"   : "# Directory for demo projects",
+        "builds"  : "# Directory for build output"
     }
     
     demos_cout = 1
     game_cout = 1
     
     print("src")
-    for top_level_dir in ["game", "demos", "builds"]:
-        dir_path = os.path.join(base_dir, top_level_dir)
+    for top_level_dir in ["projects", "demos", "builds"]:
+        if top_level_dir == "projects":
+            dir_path = os.path.join(ROOT_DIR, "projects")
+        else:
+            dir_path = os.path.join(ROOT_DIR, top_level_dir)
         if os.path.isdir(dir_path):
             parent_dir_name = os.path.basename(dir_path)
             print(f"├── {top_level_dir} {annotations.get(top_level_dir, '')}")
@@ -284,7 +290,7 @@ def build_projects_info():
                 if parent_dir_name == "demos":
                     DEMO_PROJECTS[demos_cout] = dir_name
                     demos_cout += 1
-                if parent_dir_name == "game":
+                if parent_dir_name == "projects":
                     USERS_PROJECTS[game_cout] = dir_name
                     game_cout += 1
                 prefix = "└──" if i == len(subdirs) else "├──"
@@ -294,9 +300,10 @@ def build_projects_info():
 
 def get_user_project():
     global PROJECT_NAME, PROJECT_PATH
-    break_outer_loop = False
+    PROJECT_NAME = PROJECT_PATH = None
+    _break_outer_loop = False
     while True:
-        if break_outer_loop:
+        if _break_outer_loop:
             break
     
         project_name = input("Enter project name / index or -1 to exit: ").strip()
@@ -330,14 +337,14 @@ def get_user_project():
             print("Invalid project name: Use 'G' or 'D' prefix for numeric selection.\n")
             continue
 
-        game_path = Path.cwd() / "game" / project_name
-        demo_path = Path.cwd() / "demos" / project_name
+        game_path = os.path.join(USER_PROJECTS_DIR, project_name)
+        demo_path = os.path.join(DEMO_PROJECTS_DIR, project_name)
 
-        if game_path.exists():
+        if os.path.exists(game_path):
             PROJECT_PATH = game_path
             PROJECT_NAME = project_name
             break
-        elif demo_path.exists():
+        elif os.path.exists(demo_path):
             PROJECT_PATH = demo_path
             PROJECT_NAME = project_name
             break
@@ -346,11 +353,11 @@ def get_user_project():
             while True:
                 choice = input(f"Create project '{project_name}'? (y/n, -1 to exit): ").lower()
                 if choice == 'y':
-                    path = Path.cwd() / "game" / project_name
-                    path.mkdir(parents=True, exist_ok=True)
+                    path = os.path.join(USER_PROJECTS_DIR, project_name)
+                    os.makedirs(path, exist_ok=True)
                     PROJECT_PATH = path
                     PROJECT_NAME = project_name
-                    break_outer_loop = True
+                    _break_outer_loop = True
                     break
                 elif choice == 'n':
                     print("Please enter a different project name.\n")
@@ -361,14 +368,14 @@ def get_user_project():
                     print("Invalid input. Please enter 'y', 'n', or '-1'.\n")
 
 def configure_project():
-    if PROJECT_NAME and not (Path("demos") / PROJECT_NAME).exists() and \
-        not (Path("game") / PROJECT_NAME).exists():
+    if PROJECT_NAME and not os.path.exists(os.path.join("demos", PROJECT_NAME)) and \
+        not os.path.exists(os.path.join("game", PROJECT_NAME)):
         print(f"Specified project {PROJECT_NAME} not found!")
         input("Press 'Enter' to continue...")
         sys.exit(1)
 
-    if not any(PROJECT_PATH.iterdir()):
-        with open(PROJECT_PATH / "MyScript.cpp", "w") as f:
+    if not os.listdir(PROJECT_PATH):
+        with open(os.path.join(PROJECT_PATH, "MyScript.cpp"), "w") as f:
             f.write("""#include \"runtimeScript.hpp\"
 
 class MyScript : public RuntimeScript {
@@ -379,7 +386,7 @@ public:
     }
 };
 """)
-    print(f"Starting project '{PROJECT_PATH.name}'\n")
+    print(f"Starting project '{PROJECT_PATH}'\n")
 
 def set_directories():
     global BUILD_DIR
@@ -388,29 +395,28 @@ def set_directories():
     global EXEC_PATH
     
     if PROJECT_NAME:
-        BUILD_DIR = Path.cwd() / "builds" / PROJECT_NAME
+        BUILD_DIR = os.path.join(ROOT_DIR, "builds", PROJECT_NAME)
     else:
-        BUILD_DIR = Path.cwd() / "builds" / "default-project"
+        BUILD_DIR = os.path.join(ROOT_DIR, "builds", "default-project")
         
-    BUILD_DIR.mkdir(parents=True, exist_ok=True)
-    EXEC_DIR  = BUILD_DIR / "Release"
+    os.makedirs(BUILD_DIR, exist_ok=True)
+    EXEC_DIR  = os.path.join(BUILD_DIR, "Release") 
     EXEC_NAME = "game.exe" if OS_TYPE == "Windows" else "game"
-    EXEC_PATH = EXEC_DIR / EXEC_NAME
+    EXEC_PATH = os.path.join(EXEC_DIR, EXEC_NAME)
 
 def generate_export_functions():
     global export_functions_file
     global export_functions
 
     # Set up paths for the export directory and output files
-    export_dir = PROJECT_PATH / "exports"
-    export_dir.mkdir(exist_ok=True)  # Ensure export directory exists
-    export_functions_src = export_dir / "export_functions.cpp"  # Exported function src file
-    
-    export_functions_file = EXEC_DIR / "export_functions.txt"  # Exported function names .txt file
+    export_dir = os.path.join(PROJECT_PATH, "exports")
+    os.makedirs(export_dir, exist_ok=True)  # Ensure export directory exists
+    export_functions_src = os.path.join(export_dir, "export_functions.cpp")  # Exported function src file
+    export_functions_file = os.path.join(EXEC_DIR, "export_functions.txt")  # Exported function names .txt file
 
-    # Recursively find all .cpp files in the project directory, excluding the export src file itself
-    cpp_files = list(PROJECT_PATH.rglob("*.cpp"))
-    cpp_files = [f for f in cpp_files if "export_functions" not in str(f)]
+    # Recursively find all .cpp files in PROJECT_PATH, exclude export_functions.cpp
+    cpp_files = glob.glob(os.path.join(PROJECT_PATH, "**", "*.cpp"), recursive=True)
+    cpp_files = [f for f in cpp_files if f != "export_functions"]
 
     # Export content containers
     includes = ['#include "runtimeScript.hpp"']  # Always include base class header
@@ -419,11 +425,12 @@ def generate_export_functions():
 
     # Process .cpp files
     for cpp_file in cpp_files:
-        class_name = cpp_file.stem  # Assume class name is the same as filename
+        filename = os.path.basename(cpp_file)
+        class_name, ext = os.path.splitext(filename)  # Get stem without extension
 
         # Check if class inherits from RuntimeScript
         try:
-            with cpp_file.open("r", encoding="utf-8") as f:
+            with open(cpp_file, "r", encoding="utf-8") as f:
                 content = f.read()
         except Exception as e:
             print(f"Could not read file {cpp_file}: {e}")
@@ -432,10 +439,13 @@ def generate_export_functions():
         if f"class {class_name} : public RuntimeScript" not in content:
             continue
 
-        # Determine the include path: prefer .hpp file if it exists otherwise .cpp
-        header_path = cpp_file.with_suffix(".hpp")
-        rel_path = os.path.relpath(header_path if header_path.exists() else cpp_file, export_dir).replace("\\", "/")
-        
+        # Determine the include path: prefer .hpp file if it exists, otherwise .cpp
+        header_path = os.path.splitext(cpp_file)[0] + ".hpp"
+        if os.path.exists(header_path):
+            rel_path = os.path.relpath(header_path, export_dir).replace("\\", "/")
+        else:
+            rel_path = os.path.relpath(cpp_file, export_dir).replace("\\", "/")
+
         # Avoid duplicate includes
         include_stmt = f'#include "{rel_path}"'
         if include_stmt not in includes:
@@ -443,8 +453,8 @@ def generate_export_functions():
 
         # Generate the export function definition for this class
         export_bodies.append(f'''extern "C" GAME_API RuntimeScript* create_instance_{class_name}(Demon& demon) {{
-    return new {class_name}(demon);
-}}''')
+        return new {class_name}(demon);
+    }}''')
 
         # Add the function name to the list
         export_functions.append(f"create_instance_{class_name}")
@@ -453,17 +463,13 @@ def generate_export_functions():
     output = "// Auto-generated export functions\n" + "\n".join(includes) + "\n\n" + "\n".join(export_bodies)
     output += "\n"
 
-    with export_functions_src.open("w", encoding="utf-8") as f:
+    with open(export_functions_src, "w", encoding="utf-8") as f:
         f.write(output)
 
     # Confirmation output
     print(f"Export functions generated: {export_functions_src}")
 
 def log_cmake_output(log_file, *command):
-    log_file = Path(log_file)
-    if not log_file.parent.exists():
-        log_file.parent.mkdir(parents=True)
-
     with open(log_file, "a", encoding="utf-8") as f:
         # Enable line-buffered text mode
         process = subprocess.Popen(
@@ -490,33 +496,33 @@ def run_cmake_config():
         cmake_arch_option = ["-A", "x64"]
 
     # Normalize project path to avoid backslash issues
-    normalized_project_path = Path(PROJECT_PATH).as_posix()
+    normalized_project_path = (PROJECT_PATH).replace("\\", "/")
     project_option = f"-DPROJECT_PATH={normalized_project_path}"
 
-    build_log = LOGs_DIR + "/build-log.log"
+    build_log = os.path.join(LOGs_DIR, "build-log.log")
     with open(build_log, 'w') as f:
         f.write("Starting Configuration with CMake...\n")
     log_cmake_output(build_log, cmake, f"-B{BUILD_DIR}", "-S.", *cmake_arch_option, project_option)
 
 def run_cmake_build():
-    build_log = LOGs_DIR + "/build-log.log"
+    build_log = os.path.join(LOGs_DIR, "build-log.log")
     with open(build_log, 'a') as f:
         f.write("\n\nStarting Build...\n")
 
     log_cmake_output(build_log, cmake, "--build", str(BUILD_DIR), "--config", "Release")
 
 def create_runtime_config():
-    release_dir = BUILD_DIR / "Release"
-    release_dir.mkdir(parents=True, exist_ok=True)
+    release_dir = os.path.join(BUILD_DIR, "Release")
+    os.makedirs(release_dir, exist_ok=True)
 
     config = {
-        "working_dir": str(Path.cwd().resolve().as_posix()),
-        "USER_PROJECTS_DIR": str(PROJECT_PATH.resolve().as_posix()),
-        "shared_assets": str((Path.cwd() / "demos" / "_assets").resolve().as_posix()),
+        "working_dir": os.path.abspath(ROOT_DIR),
+        "USER_PROJECTS_DIR": os.path.abspath(PROJECT_PATH),
+        "shared_assets": os.path.abspath(os.path.join(ROOT_DIR, "stock")),
         "run_mode": "release"
     }
 
-    config_path = release_dir / "game_config.txt"
+    config_path = os.path.join(release_dir, "game_config.txt")
     with open(config_path, "w") as f:
         for key, value in config.items():
             f.write(f"{key}: {value}\n")
@@ -526,9 +532,9 @@ def create_runtime_config():
 def run_executable():
     print(f"Checking for executable in {EXEC_PATH}")
 
-    if EXEC_PATH.exists():
+    if os.path.exists(EXEC_PATH):
         print("Starting the game executable...")
-        subprocess.run([str(EXEC_PATH)])
+        subprocess.run([EXEC_PATH])
         input("Press 'Enter' to continue...")
     else:
         print(f"Error: Executable '{EXEC_NAME}' not found in {BUILD_DIR}.")
@@ -539,7 +545,7 @@ def finalize():
     # Write the plain-text list of exported function names generated 
     # in 'generate_export_functions'. We write them at the end, 
     # after build directories have been created.
-    with export_functions_file.open("w", encoding="utf-8") as f:
+    with open(export_functions_file, "w", encoding="utf-8") as f:
         f.write("\n".join(export_functions))
 
 # start
