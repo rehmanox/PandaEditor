@@ -1,10 +1,12 @@
 #ifndef DLL_LOADER_HPP
 #define DLL_LOADER_HPP
 
+#include <unordered_map>
 #include <windows.h>
 #include <iostream>
-#include <vector>
 #include <string>
+
+#include "exportMacros.hpp"
 
 class RuntimeScript;
 class Demon;
@@ -12,9 +14,9 @@ class Demon;
 class DllLoader {
 public:
     using CreateInstanceFunc = RuntimeScript* (*)(Demon&);
-
+    HMODULE hDLL;
     DllLoader() = default;
-    ~DllLoader() { unload_all_scripts(); }
+    ~DllLoader() { /*unload_all_scripts();*/ }
 
     bool load_script_dll(
         const std::string& function_name,
@@ -27,14 +29,27 @@ public:
         Demon& demon);
 
     void unload_all_scripts();
+    RuntimeScript* get_script(const std::string& name) const;
 
 private:
     struct ScriptModule {
-        HMODULE hDLL;
         RuntimeScript* script_instance;
     };
 
-    std::vector<ScriptModule> loaded_scripts;
+    std::unordered_map<std::string, ScriptModule> loaded_scripts; // key: script name
+};
+
+class UserScriptsReg {
+public:
+    static UserScriptsReg& get_instance();
+    void register_script(const std::string& name);
+    const std::vector<std::string>& get_scripts() const;
+private:
+    std::vector<std::string> scripts;
+};
+
+struct ENGINE_API ScriptRegistrar {
+    ScriptRegistrar(const std::string& name);
 };
 
 #endif // DLL_LOADER_HPP

@@ -1,18 +1,13 @@
 #include <string>
 #include <unordered_map>
 
-#include <clockObject.h>
-#include <asyncTask.h>
-#include <lpoint3.h>
 #include <nodePath.h>
-#include <texturePool.h>
-#include <collisionTraverser.h>
 
 #include "runtimeScript.hpp"
 #include "CharacterController.cpp"
 #include "ClassicCam.cpp"
 #include "ThirdPersonCam.cpp"
-#include "CameraCollisionHandler.cpp"
+#include "CamCollisionHandler.cpp"
 #include "pathUtils.hpp"
 
 const std::string environment_path = PathUtils::to_os_specific("models/Level.egg");
@@ -31,14 +26,22 @@ public:
         RuntimeScript(demon),
         classic_cam(game.main_cam, ralph),
         third_person_cam(game.main_cam, ralph, mouse),
-        camera_collision_handler(ralph, c_trav),
-        character_controller(ralph, c_trav) {	
-
+        cam_collision_handler(ralph, c_trav),
+        character_controller(ralph, c_trav) {}
+        
+    void start()
+    {
+        // Call base 'start' method to 
+        RuntimeScript::start();
+        
+        // Create a key map and register keys to their corresponding events
+        register_keys();
+        
         // load environment
         environment = resource_manager.load_model(environment_path);
         environment.reparent_to(game.render);
         environment.set_pos(LPoint3(0.0f, 0.0f, 0.0f));
-		
+        
         // ------------------------------------------------------------------------------ //
         // --------------------------- Setup Character Controller ----------------------- //
         // ------------------------------------------------------------------------------ //
@@ -53,13 +56,9 @@ public:
         // ------------------------------------------------------------------------------ //
         // ---------------------------- Setup Camera Controller ------------------------ //
         // ------------------------------------------------------------------------------ //
-        // Initialize
         classic_cam.init();
         third_person_cam.init();
-        camera_collision_handler.init();
-        
-        // Create a key map and register keys to their corresponding events
-        register_keys();
+        cam_collision_handler.init();
 
         // Finalize
         // Update at least once before the first 'RoamingRalphDemoUpdate' task update        
@@ -89,13 +88,17 @@ protected:
             case RTS:
                 break;
             default:
-                classic_cam.update(dt, input_map);;
+                classic_cam.update(dt, input_map);
+                break;
         }
     }
 
 	void on_event(const std::string& event_name)
     {
 		RuntimeScript::on_event(event_name);
+        
+        if (event_name == "wheel_up")
+            third_person_cam.zoom(1, dt);
     }
 
 private:
@@ -103,7 +106,7 @@ private:
     CharacterController    character_controller;
     ClassicCam             classic_cam;
     ThirdPersonCam         third_person_cam;
-    CameraCollisionHandler camera_collision_handler;
+    CamCollisionHandler    cam_collision_handler;
 
     // Environment and character models
     NodePath environment;
@@ -113,7 +116,7 @@ private:
     CollisionTraverser c_trav;
     
     // Other
-    enum CamType cam_type = ThirdPerson;
+    enum CamType cam_type = Classic;
         
     void register_keys()
     {
@@ -135,3 +138,5 @@ private:
 		this->register_button_map(buttons_map);
     }
 };
+
+REGISTER_SCRIPT(RoamingRalphDemo)

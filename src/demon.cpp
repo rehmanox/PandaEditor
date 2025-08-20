@@ -98,26 +98,6 @@ Demon::Demon() : game(*this) {
 	
 	engine.mouse.set_mouse_mode(WindowProperties::M_absolute);
 	
-    // Get DLL functions file
-    dll_functions_file = PathUtils::join_paths(
-        PathUtils::get_executable_dir(),
-        "export_functions.txt");
-    
-    // Load editor DLLs
-    const std::vector<std::string> dll_functions = load_dll_functions(dll_functions_file);
-    std::vector<std::string> ed_functions;
-
-    const std::string prefix = "create_instance_Editor_";
-    std::copy_if(
-        dll_functions.begin(), dll_functions.end(),
-        std::back_inserter(ed_functions),
-        [&](const std::string& name) {
-            return name.size() >= prefix.size() &&
-               name.compare(0, prefix.size(), prefix) == 0;
-        });
-
-    dllLoader.load_script_dll(ed_functions, "game_script.dll", *this);
-    
     // Add event hooks
 	engine.accept("window-event", [this]() { engine.on_evt_size(); } );
     
@@ -167,6 +147,16 @@ void Demon::start() {
 	}
 }
 
+void Demon::exit() {
+	if(_cleaned_up)
+		return;
+    
+    p3d_imgui.clean_up();
+	engine.clean_up();
+
+	_cleaned_up = true;
+}
+
 void Demon::load_config(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
@@ -186,26 +176,6 @@ void Demon::load_config(const std::string& filepath) {
             config[key] = value;
         }
     }
-}
-
-std::vector<std::string> Demon::load_dll_functions(const std::string& filepath) {
-    std::vector<std::string> functions;
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open function list: " << filepath << std::endl;
-        return functions;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        // Trim
-        line.erase(0, line.find_first_not_of(" \t\r\n"));
-        line.erase(line.find_last_not_of(" \t\r\n") + 1);
-        if (!line.empty()) {
-            functions.push_back(line);
-        }
-    }
-    return functions;
 }
 
 void Demon::setup_paths() {
@@ -270,12 +240,12 @@ void Demon::enable_game_mode() {
 
     engine.ignore("ENGINE", "shift-e");
     
-    // load exported functions
-    std::vector<std::string> dll_functions = load_dll_functions(dll_functions_file);
-    
     // load dlls
-    dllLoader.load_script_dll(dll_functions, "game_script.dll", *this);
-    
+    dllLoader.load_script_dll(
+        UserScriptsReg::get_instance().get_scripts(),
+        "game_script.dll",
+        *this);
+
     // Enable game mode
 	engine.trigger("game_mode_enabled");
 	std::cout << "Game mode enabled\n";
@@ -287,11 +257,10 @@ void Demon::exit_game_mode() {
 		return;
 
 	engine.trigger("game_mode_disabled");
-    
+
     // 'exit_game_mode' sends "game_mode_disabled" event signaling
     // user-scripts to stop and clean_up, which may take a frame, so
     // we defer scripts unloading to next epoch.
-
     // Create task to unload scripts
     PT(AsyncTask) scripts_unload_task =
         (make_task([this](AsyncTask *task) -> AsyncTask::DoneStatus {
@@ -405,14 +374,8 @@ bool Demon::is_game_mode() {
 	return _game_mode_enabled == true;
 }
 
-void Demon::exit() {
-	if(_cleaned_up)
-		return;
-    
-    p3d_imgui.clean_up();
-	engine.clean_up();
-
-	_cleaned_up = true;
+const DllLoader& Demon::get_dll_loader() const {
+    return dllLoader;
 }
 
 // ----------------------------------------- imgui integration ----------------------------------------- //
@@ -453,6 +416,7 @@ void Demon::imgui_update() {
     }
     
     // 
+    ImGui::SetCurrentContext(p3d_imgui.context_);
 	engine.trigger("render_imgui");
 	this->p3d_imgui.render_imgui();
 	if(ImGui::GetIO().WantCaptureMouse) { _mouse_over_ui = true; }

@@ -12,6 +12,7 @@ public:
 
 protected:
     void render_imgui() override {
+
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
         {
@@ -50,3 +51,5 @@ protected:
         }
     }
 };
+
+REGISTER_SCRIPT(Editor_ImGUIDemo)

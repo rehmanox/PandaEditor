@@ -19,6 +19,8 @@ public:
     virtual ~RuntimeScript();
 
     virtual void start();
+    void start_update_task();
+    void stop_update_task();
 
     int get_sort();
     int get_priority();
@@ -61,9 +63,13 @@ private:
     std::string task_name;
     PT(AsyncTask) update_task;
     std::unordered_map<std::string, std::pair<std::string, bool>> buttons_map_;
-        
-    void start_update_task();
-    void stop_update_task();
+    
 };
+
+#define REGISTER_SCRIPT(ScriptClass)                                                 \
+extern "C" GAME_API RuntimeScript* create_instance_##ScriptClass(Demon& demon) {     \
+    return new ScriptClass(demon);                                                   \
+}                                                                                    \
+static ScriptRegistrar ScriptClass##_registrar(#ScriptClass);                        \
 
 #endif // RUNTIME_SCRIPT_H

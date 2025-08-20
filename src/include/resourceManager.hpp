@@ -5,11 +5,12 @@
 #include <string>
 #include <unordered_map>
 
+#include "exportMacros.hpp"
 
 class NodePath;
 class Texture;
 
-class ResourceManager {
+class ENGINE_API ResourceManager {
 public:
     ResourceManager();
 	

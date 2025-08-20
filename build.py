@@ -79,6 +79,8 @@ THIRDPARTY_DIR = os.path.join(ROOT_DIR, "src", "thirdparty")
 LOGs_DIR = os.path.join(ROOT_DIR, "logs")
 BUILD_DIR = None
 
+STOCK_SCRIPTS_DIR = os.path.join(ROOT_DIR, "stock", "scripts")
+
 DEMO_PROJECTS  = {}
 DEMO_PROJECTS_DIR = os.path.join(ROOT_DIR, "demos")
 USERS_PROJECTS = {}
@@ -398,76 +400,11 @@ def set_directories():
         BUILD_DIR = os.path.join(ROOT_DIR, "builds", PROJECT_NAME)
     else:
         BUILD_DIR = os.path.join(ROOT_DIR, "builds", "default-project")
-        
+
     os.makedirs(BUILD_DIR, exist_ok=True)
     EXEC_DIR  = os.path.join(BUILD_DIR, "Release") 
     EXEC_NAME = "game.exe" if OS_TYPE == "Windows" else "game"
     EXEC_PATH = os.path.join(EXEC_DIR, EXEC_NAME)
-
-def generate_export_functions():
-    global export_functions_file
-    global export_functions
-
-    # Set up paths for the export directory and output files
-    export_dir = os.path.join(PROJECT_PATH, "exports")
-    os.makedirs(export_dir, exist_ok=True)  # Ensure export directory exists
-    export_functions_src = os.path.join(export_dir, "export_functions.cpp")  # Exported function src file
-    export_functions_file = os.path.join(EXEC_DIR, "export_functions.txt")  # Exported function names .txt file
-
-    # Recursively find all .cpp files in PROJECT_PATH, exclude export_functions.cpp
-    cpp_files = glob.glob(os.path.join(PROJECT_PATH, "**", "*.cpp"), recursive=True)
-    cpp_files = [f for f in cpp_files if f != "export_functions"]
-
-    # Export content containers
-    includes = ['#include "runtimeScript.hpp"']  # Always include base class header
-    export_bodies = []      # Export function definitions
-    export_functions = []   # Exported functions names
-
-    # Process .cpp files
-    for cpp_file in cpp_files:
-        filename = os.path.basename(cpp_file)
-        class_name, ext = os.path.splitext(filename)  # Get stem without extension
-
-        # Check if class inherits from RuntimeScript
-        try:
-            with open(cpp_file, "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception as e:
-            print(f"Could not read file {cpp_file}: {e}")
-            continue
-
-        if f"class {class_name} : public RuntimeScript" not in content:
-            continue
-
-        # Determine the include path: prefer .hpp file if it exists, otherwise .cpp
-        header_path = os.path.splitext(cpp_file)[0] + ".hpp"
-        if os.path.exists(header_path):
-            rel_path = os.path.relpath(header_path, export_dir).replace("\\", "/")
-        else:
-            rel_path = os.path.relpath(cpp_file, export_dir).replace("\\", "/")
-
-        # Avoid duplicate includes
-        include_stmt = f'#include "{rel_path}"'
-        if include_stmt not in includes:
-            includes.append(include_stmt)
-
-        # Generate the export function definition for this class
-        export_bodies.append(f'''extern "C" GAME_API RuntimeScript* create_instance_{class_name}(Demon& demon) {{
-        return new {class_name}(demon);
-    }}''')
-
-        # Add the function name to the list
-        export_functions.append(f"create_instance_{class_name}")
-
-    # Assemble and write the final C++ source file
-    output = "// Auto-generated export functions\n" + "\n".join(includes) + "\n\n" + "\n".join(export_bodies)
-    output += "\n"
-
-    with open(export_functions_src, "w", encoding="utf-8") as f:
-        f.write(output)
-
-    # Confirmation output
-    print(f"Export functions generated: {export_functions_src}")
 
 def log_cmake_output(log_file, *command):
     with open(log_file, "a", encoding="utf-8") as f:
@@ -541,13 +478,6 @@ def run_executable():
         input("Press 'Enter' to continue...")
         sys.exit(1)
 
-def finalize():
-    # Write the plain-text list of exported function names generated 
-    # in 'generate_export_functions'. We write them at the end, 
-    # after build directories have been created.
-    with open(export_functions_file, "w", encoding="utf-8") as f:
-        f.write("\n".join(export_functions))
-
 # start
 print("\nPandaEditor Project Configuration and Build System.\n")
 print("Starting to configure dependencies...")
@@ -563,11 +493,9 @@ build_projects_info()
 get_user_project()
 configure_project()
 set_directories()
-generate_export_functions()
 run_cmake_config()
 run_cmake_build()
 create_runtime_config()
-finalize()
 
 # run the executable
 run_executable()

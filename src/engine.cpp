@@ -159,9 +159,7 @@ void Engine::setup_mouse_keyboard(PT(MouseWatcher)& mw) {
 
 void Engine::process_events(CPT_Event event) {
     if (!event->get_name().empty()) {
-
 		// std::cout << "EventGenerated: " << event->get_name() << std::endl;
-
         std::vector<void*> param_list;
         for (int i = 0; i < event->get_num_parameters(); ++i) {
 
@@ -195,54 +193,11 @@ void Engine::process_events(CPT_Event event) {
     }
 }
 
-void Engine::update() {
-    // traverse the data graph.This reads all the control
-    // inputs(from the mouse and keyboard, for instance) and also
-    // directly acts upon them(for instance, to move the avatar).
-    data_graph_trav.traverse(data_root.node());
-
-    // process events
-    while (!event_queue->is_queue_empty()) {
-        process_events(event_queue->dequeue_event());
-    }
-
-    // update mouse and camera
-    mouse.update();
-    scene_cam.update();
-}
-
-void Engine::on_evt_size() {
-    aspect_ratio = 0.0f;
-
-    if (win != nullptr) {
-        if (DCAST(GraphicsWindow, win) && win->has_size()) {
-			window_size = LVecBase2i(win->get_sbs_left_x_size(), win->get_sbs_left_y_size());
-            aspect_ratio = static_cast<float>(win->get_sbs_left_x_size()) / static_cast<float>(win->get_sbs_left_y_size());
-        }
-    }
-    
-    if (aspect_ratio == 0)
-        return;
-
-    aspect2D.set_scale(1.0f / aspect_ratio, 1.0f, 1.0f);
-    
-    if(scene_cam)
-        scene_cam.on_resize_event(aspect_ratio);
-    
-    if (window_size.get_x() > 0 && window_size.get_y() > 0) {
-        pixel2D.set_scale(2.0f / window_size.get_x(), 1.0f, 2.0f / window_size.get_y());
-	}
-
-	should_repaint = true;
-}
-
 void Engine::reset_clock() {
     ClockObject::get_global_clock()->set_real_time(TrueClock::get_global_ptr()->get_short_time());
 	ClockObject::get_global_clock()->tick();
     AsyncTaskManager::get_global_ptr()->set_clock(ClockObject::get_global_clock());
 }
-
-void Engine::show_axis_grid(bool show) { show?axis_grid.show():axis_grid.hide(); }
 
 void Engine::clean_up() {
     // Remove all tasks
@@ -271,104 +226,147 @@ void Engine::clean_up() {
     engine->remove_all_windows();
 }
 
-void Engine::accept(const std::string& event_name, std::function<void()> callback) {
-    Engine::accept("ENGINE", event_name, callback);
+void Engine::update() {
+    // traverse the data graph.This reads all the control
+    // inputs(from the mouse and keyboard, for instance) and also
+    // directly acts upon them(for instance, to move the avatar).
+    data_graph_trav.traverse(data_root.node());
+
+    // process events
+    while (!event_queue->is_queue_empty()) {
+        process_events(event_queue->dequeue_event());
+    }
+
+    // update mouse and camera
+    mouse.update();
+    scene_cam.update();
 }
 
-void Engine::accept(const std::string& owner, const std::string& event_name, std::function<void()> callback) {    
-    events_map.emplace_back(owner.c_str(), event_name.c_str(), std::move(callback));
+void Engine::accept(const std::string& event_name, std::function<void()> callback) {
+    accept("ENGINE", event_name, std::move(callback));
+}
+
+void Engine::accept(
+    const std::string& owner,
+    const std::string& event_name,
+    std::function<void()> callback) {
+    /*
+    std::cout << "Accept event, owner: " << 
+    owner.c_str() << " event: " << 
+    event_name.c_str() << 
+    std::endl;
+    */
+    event_handlers[{owner, event_name}] = std::move(callback);
 }
 
 void Engine::ignore(const std::string& owner) {
-    events_map.erase(
-        std::remove_if(events_map.begin(), events_map.end(),
-           [&](const EventInfo& event) {
-               return std::strncmp(event.owner, owner.c_str(), std::strlen(event.owner)) == 0;
-           }),
-        events_map.end());
+    for (auto it = event_handlers.begin(); it != event_handlers.end(); ) {
+        if (it->first.owner == owner) {
+            it = event_handlers.erase(it);
+        } else {
+            ++it;
+        }
+    }
 } 
 
 void Engine::ignore(const std::string& owner, const std::string& event_name) {
-    events_map.erase(std::remove_if(events_map.begin(), events_map.end(),
-        [&](const EventInfo& event) {
-            return std::strncmp(event.owner, owner.c_str(), std::strlen(event.owner)) == 0 &&
-                   std::strncmp(event.event_id, event_name.c_str(), std::strlen(event.event_id)) == 0;
-        }),
-        events_map.end());
+    event_handlers.erase({owner, event_name});
 }
 
 void Engine::ignore_all() {
-    events_map.clear();
-}
-
-bool Engine::has_event(const std::string& owner, const std::string& event_name) {
-    return std::any_of(events_map.begin(), events_map.end(),
-        [&](const EventInfo& event) {
-            return std::strncmp(event.owner, owner.c_str(), sizeof(event.owner)) == 0 &&
-                   std::strncmp(event.event_id, event_name.c_str(), sizeof(event.event_id)) == 0;
-        });
-}
-
-bool Engine::has_event(const std::string& owner) {
-    return std::any_of(events_map.begin(), events_map.end(),
-        [&](const EventInfo& event) {
-            return std::strncmp(event.owner, owner.c_str(), sizeof(event.owner)) == 0;
-        });
-}
-
-void Engine::add_event_listener(const std::string& listener_name, std::function<void(std::string)> callback) {
-    events_listeners.emplace_back(listener_name.c_str(), std::move(callback));
-}
-
-void Engine::remove_event_listener(const std::string& listener_name) {
-    // size_t initial_size = events_listeners.size(); // Store initial size
-
-    events_listeners.erase(
-        std::remove_if(events_listeners.begin(), events_listeners.end(),
-           [&](const EventListenerInfo& event_listener) {
-               return std::strncmp(
-                event_listener.listener,
-                listener_name.c_str(),
-                std::strlen(event_listener.listener)) == 0;
-           }),
-        events_listeners.end());
-}
-
-void Engine::clear_event_listeners() {
-    events_listeners.clear();
-}
-
-void Engine::trigger(const char* event_name) {
-    for (const auto& event : events_map) {
-        if (std::strncmp(event.event_id, event_name, std::strlen(event.event_id)) == 0) {
-            event.callback();
-        }
-    }
+    event_handlers.clear();
 }
 
 void Engine::dispatch_event(const char* evt_name) {
 	Engine::trigger(evt_name);
 }
 
-void Engine::dispatch_events(bool ignore_mouse) {
-	const Event* event;
-	for (auto it = panda_events.begin(); it != panda_events.end(); ++it) {
-		event = it->first.p();
-        
-        // Send raw event hooks
-        for (auto& listener : events_listeners) {
-            listener.callback(event->get_name());
+void Engine::trigger(const char* event_name) {
+    for (const auto& pair : event_handlers) {
+        if (pair.first.name == event_name) {
+            /*
+            std::cout << "Triggering event '" << 
+            event_name << "' for owner '" << 
+            pair.first.owner << "'\n";
+            */
+            pair.second();
         }
-        
-		// Other
-		if(ignore_mouse && event->get_name().substr(0, 5) == "mouse")
-			continue;
-        
-		// Trigger named events
-		Engine::trigger(event->get_name().c_str());
+    }
+}
+
+bool Engine::has_event(const std::string& owner) {
+    for (const auto& pair : event_handlers) {
+        if (pair.first.owner == owner)
+            return true;
+    }
+    return false;
+}
+
+bool Engine::has_event(const std::string& owner, const std::string& event_name) {
+    return event_handlers.find({owner, event_name}) != event_handlers.end();
+}
+
+void Engine::add_event_listener(const std::string& name, std::function<void(std::string)> callback) {
+    event_listeners[name] = std::move(callback);
+}
+
+void Engine::remove_event_listener(const std::string& name) {
+    event_listeners.erase(name);
+}
+
+void Engine::clear_event_listeners() {
+   event_listeners.clear();
+}
+
+void Engine::dispatch_events(bool ignore_mouse) {
+    for (const auto& event_pair : panda_events) {
+        const CPT_Event& event = event_pair.first;
+        std::string name = event->get_name();
+
+        // Notify listeners
+        for (const auto& listener_pair : event_listeners) {
+            const std::string& listener_name = listener_pair.first;
+            const auto& callback = listener_pair.second;
+            callback(name);
+        }
+
+        // Ignore mouse events if requested
+        if (ignore_mouse && name.find("mouse") == 0)
+            continue;
+
+        trigger(name.c_str());
+    }
+
+    panda_events.clear();
+}
+
+void Engine::on_evt_size() {
+    aspect_ratio = 0.0f;
+
+    if (win != nullptr) {
+        if (DCAST(GraphicsWindow, win) && win->has_size()) {
+			window_size = LVecBase2i(win->get_sbs_left_x_size(), win->get_sbs_left_y_size());
+            aspect_ratio = static_cast<float>(win->get_sbs_left_x_size()) / static_cast<float>(win->get_sbs_left_y_size());
+        }
+    }
+    
+    if (aspect_ratio == 0)
+        return;
+
+    aspect2D.set_scale(1.0f / aspect_ratio, 1.0f, 1.0f);
+    
+    if(scene_cam)
+        scene_cam.on_resize_event(aspect_ratio);
+    
+    if (window_size.get_x() > 0 && window_size.get_y() > 0) {
+        pixel2D.set_scale(2.0f / window_size.get_x(), 1.0f, 2.0f / window_size.get_y());
 	}
-	
-	panda_events.clear();
+
+	should_repaint = true;
+}
+
+void Engine::show_axis_grid(bool show) { 
+    show?axis_grid.show():axis_grid.hide();
 }
 
 float Engine::get_aspect_ratio() {

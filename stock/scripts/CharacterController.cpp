@@ -41,7 +41,6 @@ public:
         collision_ray_node->set_into_collide_mask(CollideMask::all_off());
 
         collision_np = character.attach_new_node(collision_ray_node);
-        collision_np.show();
         collision_handler_queue = new CollisionHandlerQueue();
         c_trav.add_collider(collision_np, collision_handler_queue);
 	}

@@ -6,13 +6,14 @@
 #include <fstream>
 #include <iostream>
 
+#include "exportMacros.hpp"
 #include "constants.hpp"
 #include "engine.hpp"
 #include "game.hpp"
 #include "p3d_Imgui.hpp"
 #include "dllLoader.hpp"
 
-class Demon {
+class ENGINE_API Demon {
 public:
 	struct Settings {
 		GameViewStyle game_view_style;
@@ -28,18 +29,20 @@ public:
 
 	// Methods
 	void start();
+    void exit();
 	void bind_events();
 	void unbind_events();
 	void enable_game_mode();
 	void exit_game_mode();
-	bool is_game_mode();
 	void increase_game_view_size();
 	void decrease_game_view_size();
 	void update_game_view();
 	void update_game_view(GameViewStyle style);
 	void update_game_view(GameViewStyle style, float width,  float height);
-	void exit();
-	
+    bool is_game_mode();
+    
+    const DllLoader& get_dll_loader() const;
+    
 	// Fields
 	Engine engine;
 	Game game;
@@ -59,16 +62,13 @@ private:
 
 	// Methods
     void load_config(const std::string& filepath);
-    std::vector<std::string> load_dll_functions(const std::string& filepath);
 	void setup_paths();
 	
 	// ImGui fields and methods
 	void init_imgui(Panda3DImGui *panda3d_imgui, NodePath *parent, MouseWatcher* mw, std::string name);
 	void imgui_update();
 	
-	// Fields
-    std::string dll_functions_file;
-    
+	// Fields    
     bool _is_started;
 	bool _cleaned_up;
 	bool _game_mode_enabled;

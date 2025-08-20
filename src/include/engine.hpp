@@ -32,41 +32,32 @@
 #include <asyncTaskManager.h>
 #include <genericAsyncTask.h>
 // other
+#include "exportMacros.hpp"
 #include "sceneCam.hpp"
 #include "axisGrid.hpp"
 #include "resourceManager.hpp"
 #include "mouse.hpp"
 
-class Engine {
-struct EventInfo {
-    char owner[16];
-    char event_id[16];
-    std::function<void()> callback;
-
-    // Constructor to initialize event
-    EventInfo(const char* owner_name, const char* event_id, std::function<void()> cb)
-        : callback(std::move(cb)) {
-        std::memset(this->owner, 0, sizeof(this->owner));
-        strncpy_s(this->owner, owner_name, sizeof(this->owner) - 1);
-
-        std::memset(this->event_id, 0, sizeof(this->event_id));
-        strncpy_s(this->event_id, event_id, sizeof(this->event_id) - 1);
-    }
-};
-
-struct EventListenerInfo {
-    char listener[16];
-    std::function<void(std::string)> callback;
-
-    // Constructor to initialize event
-    EventListenerInfo(const char* listener, std::function<void(std::string)> cb)
-        : callback(std::move(cb)) {
-        std::memset(this->listener, 0, sizeof(this->listener));
-        strncpy_s(this->listener, sizeof(this->listener), listener, sizeof(this->listener) - 1);
-    }
-};
-
+class ENGINE_API Engine {
 public:
+    struct EventKey {
+        std::string owner;
+        std::string name;
+
+        bool operator==(const EventKey& other) const {
+            return owner == other.owner && name == other.name;
+        }
+
+        // Nested hash function struct
+        struct Hash {
+            std::size_t operator()(const EventKey& k) const {
+                std::size_t h1 = std::hash<std::string>{}(k.owner);
+                std::size_t h2 = std::hash<std::string>{}(k.name);
+                return h1 ^ (h2 << 1);
+            }
+        };
+    };
+
     Engine();
     ~Engine();
 
@@ -99,37 +90,39 @@ public:
     ResourceManager       resource_manager;
     AxisGrid              axis_grid;
 	
-    std::vector<EventInfo> events_map;
-    std::vector<EventListenerInfo> events_listeners;
+    std::unordered_map<EventKey, std::function<void()>, EventKey::Hash> event_handlers;
+    std::unordered_map<std::string, std::function<void(const std::string&)>> event_listeners;
 
     bool should_repaint;
 	
     // methods
+    void clean_up();
     void update();
-    void on_evt_size();
     
-    void accept(const std::string&, std::function<void()>);
-    void accept(const std::string&, const std::string&, std::function<void()>);
-    void Engine::ignore(const std::string&);
-    void Engine::ignore(const std::string&, const std::string&);
-    void Engine::ignore_all();
+    void accept(const std::string& event_name, std::function<void()> callback);
+    void accept(
+        const std::string& owner,
+        const std::string& event_name,
+        std::function<void()> callback);
+    void ignore(const std::string&);
+    void ignore(const std::string&, const std::string&);
+    void ignore_all();
+    void dispatch_event(const char*);
+    void trigger(const char*);
+    bool has_event(const std::string&);
     bool has_event(const std::string&, const std::string&);
-	bool has_event(const std::string&);
     
     void add_event_listener(const std::string&, std::function<void(std::string)>);
     void remove_event_listener(const std::string&);
     void clear_event_listeners();
  
-	void dispatch_event(const char*);
 	void dispatch_events(bool ignore_mouse = false);
-    
-	void trigger(const char*);
+    void on_evt_size();
     void show_axis_grid(bool show = false);
-	void clean_up();
-    
+
 	float get_aspect_ratio();
     LVecBase2i get_size();
-	
+ 
 private:
     void create_win();
     void create_3d_render();
@@ -137,8 +130,8 @@ private:
     void create_default_scene();
     void create_axis_grid();
     void setup_mouse_keyboard(PT(MouseWatcher)& mw);
-    void reset_clock();
 	void process_events(CPT_Event event);
+    void reset_clock();
 		
 	// cache
 	std::vector<std::pair<CPT_Event, std::vector<void*>>> panda_events;

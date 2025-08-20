@@ -5,18 +5,64 @@
 
 class ThirdPersonCam {
 public:
+	// Position settings
+    LVecBase3f target_pos_offset = LVecBase3f(0, 0, 5);
+    
+    int zoom_smooth = 100;
+    int min_zoom = 10;
+    int max_zoom = 100;
+    
+    float distance_to_target = 30.0f;
+	
+	// Orbit settings
+    int orbit_smooth = 150;
+    float max_rotation_x = 30.0f;
+    float min_rotation_x = -30.0f;
+    bool lock_y_orbit = false;
+
+	// Cache
+    float x_rotation = 0.0f;
+    float y_rotation = 0.0f;
+    
+    // Constructor
     ThirdPersonCam(NodePath& cam, NodePath& tgt, Mouse& mouse) : 
         camera(cam),
         target(tgt),
-		mouse(mouse) {}
+		mouse(mouse) { reset(); }
 
-    void init() {}
-        
+    void init()
+    { 
+        reset();
+        update( ClockObject::get_global_clock()->get_dt() );
+    }
+
     void update(float dt)
-    {        
+    {
         move_to_target();
         orbit(dt);
         look_at_target();
+    }
+    
+    void reset()
+    { 
+        // Set defaults
+        target_pos_offset = LVecBase3f(0, 0, 5);
+    
+        zoom_smooth = 100;
+        min_zoom = 10;
+        max_zoom = 100;
+        
+        distance_to_target = 30.0f;
+        
+        // Orbit settings
+        orbit_smooth = 150;
+        max_rotation_x = 30.0f;
+        min_rotation_x = -30.0f;
+        lock_y_orbit = false;
+
+        // Cache
+        x_rotation = 0.0f;
+        y_rotation = 0.0f;
     }
     
     void zoom(int zoom, float dt)
@@ -24,51 +70,18 @@ public:
         distance_to_target += zoom * zoom_smooth * dt;
         distance_to_target = clamp(distance_to_target, min_zoom, max_zoom);
     }
-    
-    void reset()
-    {
-        distance_to_target = 30.0f;
-		
-        y_rotation = 0.0f;
-        x_rotation = 0.0f;
 
-        LPoint3f newPos = target.get_pos() + target_pos_offset;
-        newPos.set_y(-distance_to_target);
-		
-        camera.set_pos(newPos);
-        update(0.0f);
-    }
-	
 	void toggle_y_orbit_lock()
     {
 		lock_y_orbit = !lock_y_orbit;
 	}
-	
-	float distance_to_target = 30.0f;
-    
+	    
 private:
 	// references
-	Mouse& mouse;
-	
+	Mouse&    mouse;
     NodePath& camera;
     NodePath& target;
-    	
-	// position settings
-    LVecBase3f target_pos_offset = LVecBase3f(0, 0, 5);
-    int zoom_smooth = 100;
-    int min_zoom = 10;
-    int max_zoom = 100;
-	
-	// orbit settings
-    int orbit_smooth = 150;
-    float max_rotation_x = 30.0f;
-    float min_rotation_x = -30.0f;
-    bool lock_y_orbit = false;
-		
-	// cache
-    float x_rotation = 0.0f;
-    float y_rotation = 0.0f;
-		
+
     void move_to_target()
     {
 		// Convert degrees to radians

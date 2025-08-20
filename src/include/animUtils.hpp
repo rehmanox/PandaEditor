@@ -1,6 +1,8 @@
 #pragma once
 
-class AnimUtils {
+#include "exportMacros.hpp"
+
+class ENGINE_API AnimUtils {
 public:
 	// Bind animations that are children of the character NodePath
 	static void bind_anims(NodePath character_np, AnimControlCollection& acc);

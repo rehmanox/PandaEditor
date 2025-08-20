@@ -59,7 +59,7 @@ inline void remove_task(const std::string& name) {
     auto task_mgr = AsyncTaskManager::get_global_ptr();
     PT(AsyncTask) task = task_mgr->find_task(name);
     if (has_task(name)) {
-		std::cout << "removed task: " << name << std::endl;
+		std::cout << "Removed task: " << name << std::endl;
         task_mgr->remove(task);
     }
 }

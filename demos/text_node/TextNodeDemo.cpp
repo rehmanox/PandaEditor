@@ -83,3 +83,5 @@ public:
         // text_node->set_small_caps_scale(0.8f);
     }
 };
+
+REGISTER_SCRIPT(TextNodeDemo)

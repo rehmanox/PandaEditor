@@ -5,14 +5,17 @@
 #include <vector>
 #include <string>
 
-class Engine;
-extern const int MOUSE_ONE;
-extern const int MOUSE_TWO;
-extern const int MOUSE_THREE;
-extern const int MOUSE_FOUR;
-extern const int MOUSE_FIVE;
+#include "exportMacros.hpp"
 
-class Mouse {
+class Engine;
+
+extern ENGINE_API const int MOUSE_ONE;
+extern ENGINE_API const int MOUSE_TWO;
+extern ENGINE_API const int MOUSE_THREE;
+extern ENGINE_API const int MOUSE_FOUR;
+extern ENGINE_API const int MOUSE_FIVE;
+
+class ENGINE_API Mouse {
 public:
     Mouse(Engine& _engine);
 	void initialize();
