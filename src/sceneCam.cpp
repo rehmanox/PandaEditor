@@ -11,8 +11,11 @@
 #include "engine.hpp"
 #include "sceneCam.hpp"
 
-SceneCam::SceneCam(Engine& engine, float move_speed, const LVecBase3f& default_pos)
-    : engine(engine), move_speed(move_speed), default_pos(default_pos), delta_speed(0.0f) {
+SceneCam::SceneCam(Engine& engine) :
+    engine(engine),
+    move_speed(30.0f),
+    default_pos(LVecBase3f(300, 400, 350)), 
+    delta_speed(0.0f) {
 
     // Create camera
     PT(Camera) cam_node = new Camera("SceneCamera");
@@ -84,7 +87,7 @@ void SceneCam::orbit(const LVecBase2f& delta) {
     float cam_vec_dist = camera_vec.length();
 
     LVecBase3f new_pos = target.get_pos() + LVecBase3f(
-        cam_vec_dist * sin(rad_x) * cos(rad_y),
+        cam_vec_dist  * sin(rad_x) * cos(rad_y),
         -cam_vec_dist * cos(rad_x) * cos(rad_y),
         -cam_vec_dist * sin(rad_y)
     );
@@ -97,13 +100,15 @@ void SceneCam::update() {
         return;
 
     delta_speed = move_speed * ClockObject::get_global_clock()->get_dt();
-
+    
     if (engine.mouse.is_button_down(MOUSE_ONE)) {
-        orbit(LVecBase2f(engine.mouse.get_dx() * delta_speed, engine.mouse.get_dy() * delta_speed));
-    } else if (engine.mouse.is_button_down(MOUSE_TWO)) {
-        move(LVecBase3f(engine.mouse.get_dx() * delta_speed, 0, -engine.mouse.get_dy() * delta_speed));
-    } else if (engine.mouse.is_button_down(MOUSE_THREE)) {
-        move(LVecBase3f(0, -engine.mouse.get_dx() * delta_speed, 0));
+        orbit(LVecBase2f(-engine.mouse.get_dx() * delta_speed, -engine.mouse.get_dy() * delta_speed));
+    } 
+    else if (engine.mouse.is_button_down(MOUSE_TWO)) {
+        move(LVecBase3f(-engine.mouse.get_dx() * delta_speed, 0, engine.mouse.get_dy() * delta_speed));
+    } 
+    else if (engine.mouse.is_button_down(MOUSE_THREE)) {
+        move(LVecBase3f(0, engine.mouse.get_dx() * delta_speed, 0));
     }
 
     update_axes();

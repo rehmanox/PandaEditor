@@ -10,7 +10,7 @@ class Engine;
 
 class SceneCam : public NodePath {
 public:
-    SceneCam(Engine& engine, float speed = 20.0f, const LVecBase3f& default_pos = LVecBase3f(300, 400, 350));
+    SceneCam(Engine& engine);
     
     void initialize();
     void update();
@@ -35,6 +35,8 @@ private:
     float delta_speed; // move speed scaled by ClockObject::get_global_clock()->get_dt()
 	
     LVecBase3f default_pos;
+    
+    LVecBase2f orbit_delta_smooth {0, 0};
 };
 
 #endif // SCENE_CAMERA_H

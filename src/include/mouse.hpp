@@ -18,27 +18,35 @@ extern ENGINE_API const int MOUSE_FIVE;
 class ENGINE_API Mouse {
 public:
     Mouse(Engine& _engine);
+
 	void initialize();
     void update();
-	void force_relative_mode();
-    void clear_modifier(int index);
+    
+	void center_mouse();
 	void toggle_force_relative_mode();
+    
+    void clear_modifier(int index);
     bool has_modifier(int modifier) const;
+    
     bool has_mouse() const;
 	bool is_button_down(int btn_idx) const;
+	bool is_mouse_centered() const;
 
     // Getters
 	float get_x()  const;
     float get_y()  const;
+    
+    float get_mx() const;
+    float get_my() const;
+    
     float get_dx() const;
     float get_dy() const;
-	int get_zoom() const;
+    
+	int   get_zoom() const;
 	
 	float get_vertical()   const;
 	float get_horizontal() const;
-	
-	bool is_mouse_centered() const;
-	
+
 	const std::unordered_map<int, bool>& get_mouse_buttons() const;
 	
 	// Setters
@@ -46,12 +54,18 @@ public:
 	void set_mouse_mode(int mouse_mode_idx);
 	
 private:
+    // raw mouse pointer x and y (pixel co-ordinates)
     float _x;
     float _y;
 	
-    float _dx;
+    // mouse x and y (screen co-ordinates)
+    float _mx;
+    float _my;
+
+    // mouse dx and dy (movement displacement from last frame)
+	float _dx;
     float _dy;
-	
+    
 	int _zoom;
 	
 	float _vertical_axis;

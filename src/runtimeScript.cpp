@@ -67,7 +67,9 @@ const std::string RuntimeScript::get_name() {
 }
 
 // Register button map
-void RuntimeScript::register_button_map(std::unordered_map<std::string, std::pair<std::string, bool>>& map) {
+void RuntimeScript::register_button_map(
+    std::unordered_map<std::string, std::pair<std::string, bool>>& map) {
+
     input_map.clear();
     buttons_map_ = map;
 
@@ -80,7 +82,7 @@ void RuntimeScript::register_button_map(std::unordered_map<std::string, std::pai
 }
 
 // Event handling
-void RuntimeScript::on_update(const PT(AsyncTask)&) { std::cout << get_name() << std::endl; }
+void RuntimeScript::on_update(const PT(AsyncTask)&) {}
  
 void RuntimeScript::on_event(const std::string& event_name) {
     auto it = buttons_map_.find(event_name);
