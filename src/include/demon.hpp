@@ -15,9 +15,17 @@
 
 class ENGINE_API Demon {
 public:
-	struct Settings {
-		GameViewStyle game_view_style;
-		float game_view_size;
+    enum GameViewStyle {
+        CENTER,
+        BOTTOM_LEFT,
+        BOTTOM_RIGHT,
+        TOP_LEFT,
+        TOP_RIGHT,
+    };
+
+	struct GameViewSettings {
+		GameViewStyle style;
+		float size;
 	};
       
     // Delete copy constructor and assignment operator
@@ -46,8 +54,8 @@ public:
 	// Fields
 	Engine engine;
 	Game game;
-	Settings settings = {GameViewStyle::BOTTOM_LEFT, 0.3f};
-	Settings default_settings = {GameViewStyle::BOTTOM_LEFT, 0.3f};
+	GameViewSettings game_view = {GameViewStyle::BOTTOM_LEFT, 0.3f};
+	GameViewSettings game_view_default = {GameViewStyle::BOTTOM_LEFT, 0.3f};
     PT(MouseWatcherRegion) game_mw_region;
     
     // ImGUI instance

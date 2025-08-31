@@ -29,9 +29,8 @@ public:
 
 protected:
     Demon& demon;
-    Mouse& mouse;
-    ResourceManager& resource_manager;
     Game& game;
+    ResourceManager& resource_manager;
     
     float dt;
     std::unordered_map<std::string, bool> input_map;
@@ -63,7 +62,6 @@ private:
     std::string task_name;
     PT(AsyncTask) update_task;
     std::unordered_map<std::string, std::pair<std::string, bool>> buttons_map_;
-    
 };
 
 #define REGISTER_SCRIPT(ScriptClass)                                                 \

@@ -37,6 +37,9 @@ private:
     LVecBase3f default_pos;
     
     LVecBase2f orbit_delta_smooth {0, 0};
+    
+    // keys
+    bool alt, ctrl;
 };
 
 #endif // SCENE_CAMERA_H

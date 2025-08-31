@@ -61,6 +61,12 @@ void SceneCam::initialize() {
     axes.set_name("SceneCameraAxes");
     axes.reparent_to(engine.pixel2D);
     axes.set_scale(1.5);
+    
+    // accept events
+    engine.accept("alt",        [this]() { alt  = true;   });
+    engine.accept("alt-up",     [this]() { alt  = false;  });
+    engine.accept("control",    [this]() { ctrl = true;   });
+    engine.accept("control-up", [this]() { ctrl = false;  });
 }
 
 void SceneCam::move(const LVecBase3f& move_vec) {
@@ -96,7 +102,7 @@ void SceneCam::orbit(const LVecBase2f& delta) {
 }
 
 void SceneCam::update() {
-    if (!engine.mouse.has_mouse() || !engine.mouse.has_modifier(ALT_KEY_IDX))
+    if (!engine.mouse.has_mouse() || !alt)
         return;
 
     delta_speed = move_speed * ClockObject::get_global_clock()->get_dt();

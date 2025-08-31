@@ -70,9 +70,6 @@ public:
 
     PT(MouseWatcher)      mouse_watcher;
 	
-    std::vector<NodePath> mouse_watchers;
-	std::vector<NodePath> button_throwers;
-
     NodePath              data_root;
     DataGraphTraverser    data_graph_trav;
     EventQueue*           event_queue;
@@ -122,6 +119,8 @@ public:
 
 	float get_aspect_ratio();
     LVecBase2i get_size();
+    
+	void set_mouse_mode(int mouse_mode_idx);
  
 private:
     void create_win();
@@ -133,6 +132,8 @@ private:
 	void process_events(CPT_Event event);
     void reset_clock();
 		
+	int current_mouse_mode;
+        
 	// cache
 	std::vector<std::pair<CPT_Event, std::vector<void*>>> panda_events;
     LVecBase2i window_size;

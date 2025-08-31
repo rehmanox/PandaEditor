@@ -1,8 +1,9 @@
 #include <cstring>
 #include "engine.hpp"
+#include "taskUtils.hpp"
 #include "constants.hpp"
 
-Engine::Engine() : mouse(*this), scene_cam(*this) {
+Engine::Engine() : scene_cam(*this) {
     data_root = NodePath("DataRoot");
 
     // get global event queueand handler
@@ -13,15 +14,13 @@ Engine::Engine() : mouse(*this), scene_cam(*this) {
     create_win();
     setup_mouse_keyboard(mouse_watcher);
 
-    mouse.initialize();
-	
     create_3d_render();
     create_2d_render();
     create_axis_grid();
     create_default_scene();
 
-    // scene camera needs some references not available at time of its creation,
-    // so we init them now.
+    // Initialize helper mouse class and scene camera
+    mouse.initialize(win, mouse_watcher);
     scene_cam.initialize();
 
     // reset everything,
@@ -69,10 +68,12 @@ void Engine::create_3d_render() {
 }
 
 void Engine::create_2d_render() {
+    // Display region
     dr2D = win->make_display_region(0, 1, 0, 1);
     dr2D->set_sort(ENGINE_DR_2D_SORT);
     dr2D->set_active(true);
-
+    
+    // Render2D and Aspect2D
     render2D = NodePath("Render2D");
 	render2D.set_depth_test(false);
     render2D.set_depth_write(false);
@@ -87,10 +88,10 @@ void Engine::create_2d_render() {
     pixel2D = render2D.attach_new_node(pixel2D_);
     pixel2D.set_pos(-1, 0, 1);
 
-    auto mouse_watcher_node = DCAST(MouseWatcher, mouse_watcher);
-    DCAST(PGTop, pixel2D.node())->set_mouse_watcher(mouse_watcher_node);
-
-    // 
+    // auto mouse_watcher_node = DCAST(MouseWatcher, mouse_watcher);
+    // DCAST(PGTop, pixel2D.node())->set_mouse_watcher(mouse_watcher_node);
+    
+    // Camera2D
     cam2D = NodePath(new Camera("Camera2D"));
     cam2D.reparent_to(render2D);
 
@@ -125,12 +126,12 @@ void Engine::setup_mouse_keyboard(PT(MouseWatcher)& mw) {
         window,
         device_idx,
         win->get_input_device_name(device_idx));
-    PT(MouseWatcher) mouse_watcher = new MouseWatcher("MouseWatcher");
+    PT(MouseWatcher) mouse_watcher   = new MouseWatcher("MouseWatcher");
     PT(ButtonThrower) button_thrower = new ButtonThrower("ButtonThrower");
-		
+
     NodePath mk_node = data_root.attach_new_node(mouse_and_keyboard);
-    NodePath mouse_watcher_np = mk_node.attach_new_node(mouse_watcher);
-    NodePath button_thrower_np = mouse_watcher_np.attach_new_node(button_thrower);
+    NodePath mouse_watcher_np  = mk_node.attach_new_node(mouse_watcher);
+    NodePath button_thrower_np = mk_node.attach_new_node(button_thrower);
 
     if (win->get_side_by_side_stereo()) {
         mouse_watcher->set_display_region(win->get_overlay_display_region());
@@ -149,9 +150,6 @@ void Engine::setup_mouse_keyboard(PT(MouseWatcher)& mw) {
     mods.add_button(KeyboardButton::alt());
     mods.add_button(KeyboardButton::meta());
     button_thrower->set_modifier_buttons(mods);
-
-    mouse_watchers.push_back(mouse_watcher_np);
-    button_throwers.push_back(button_thrower_np);
 
     // Assign the reference-counted MouseWatcher to mw
     mw = mouse_watcher;
@@ -375,4 +373,39 @@ float Engine::get_aspect_ratio() {
 
 LVecBase2i Engine::get_size() {
     return window_size;
+}
+
+void Engine::set_mouse_mode(int requested_mouse_mode) {
+    WindowProperties wp = win->get_properties();
+
+    if (requested_mouse_mode == WindowProperties::M_absolute ||
+        requested_mouse_mode == WindowProperties::M_relative ||
+        requested_mouse_mode == WindowProperties::M_confined) {
+        wp.set_mouse_mode((WindowProperties::MouseMode)requested_mouse_mode);
+        std::cout << "Mouse mode set to: " << requested_mouse_mode << std::endl;
+    } else {
+        std::cout << "Unable to set_mouse_mode: " 
+                  << requested_mouse_mode << " not found." << std::endl;
+        wp.set_mouse_mode(WindowProperties::M_absolute);
+        current_mouse_mode = WindowProperties::M_absolute;
+        return;
+    }
+
+    win->request_properties(wp);
+
+    // Resolve mouse mode asynchronously (safer capture with weak ref if Engine uses shared_ptr)
+    PT(AsyncTask) current_mouse_mode_resolve_update = 
+        (make_task([this, requested_mouse_mode](AsyncTask *task) -> AsyncTask::DoneStatus {
+            WindowProperties wp = win->get_properties();
+            current_mouse_mode = wp.get_mouse_mode();
+
+            if (requested_mouse_mode != current_mouse_mode) {
+                std::cout << "ACTUAL MOUSE MODE: " << current_mouse_mode << std::endl;
+            }
+
+            return AsyncTask::DS_done;
+        }, "MouseModeResolveUpdate"));
+
+    current_mouse_mode_resolve_update->set_delay(0);
+    AsyncTaskManager::get_global_ptr()->add(current_mouse_mode_resolve_update);
 }

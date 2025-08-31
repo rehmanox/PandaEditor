@@ -41,13 +41,16 @@ Demon::Demon() : game(*this) {
     // Define MouseWatcherRegion
     // %r	Replaced with the name of the region (i.e. region.get_name())
     // %w	Replaced with the name of the MouseWatcher generating the event
-	float size = default_settings.game_view_size;	
-	game_mw_region = new MouseWatcherRegion("GameMWRegion", 0.f, size, 0.f, size);
+	game_mw_region = new MouseWatcherRegion(
+    "GameMWRegion",
+        0.f, game_view_default.size,
+        0.f, game_view_default.size);
+        
     engine.mouse_watcher->set_enter_pattern("enter-%r");
     engine.mouse_watcher->set_leave_pattern("leave-%r");
     engine.mouse_watcher->set_within_pattern("within-%r");
 	engine.mouse_watcher->add_region(game_mw_region);
-    
+
 	// Hide editor only geo from game view and vice versa
 	engine.axis_grid.hide(game_mask);
 	engine.render2D.find("**/SceneCameraAxes").hide(game_mask);
@@ -57,13 +60,14 @@ Demon::Demon() : game(*this) {
 	PT(AsyncTask) update_task =
         (make_task([this](AsyncTask *task) -> AsyncTask::DoneStatus {
 
-		engine.update();		
-		imgui_update();
+		engine.update();
 		engine.dispatch_events(_mouse_over_ui);
+        game.update();
+		imgui_update();
 		engine.engine->render_frame();
 
 		_mouse_over_ui = false;
-		
+
 		if(engine.should_repaint) {
 			p3d_imgui.should_repaint = true;
 			
@@ -93,10 +97,12 @@ Demon::Demon() : game(*this) {
 	bind_events();
 	
 	// Set defaults
-	float game_view_size = default_settings.game_view_size;
-	update_game_view(GameViewStyle::BOTTOM_LEFT, game_view_size, game_view_size);
+	update_game_view(
+        GameViewStyle::BOTTOM_LEFT,
+        game_view_default.size,
+        game_view_default.size);
 	
-	engine.mouse.set_mouse_mode(WindowProperties::M_absolute);
+	engine.set_mouse_mode(WindowProperties::M_absolute);
 	
     // Add event hooks
 	engine.accept("window-event", [this]() { engine.on_evt_size(); } );
@@ -284,28 +290,28 @@ void Demon::exit_game_mode() {
 }
 
 void Demon::increase_game_view_size() {
-	float increment = (1.0f - default_settings.game_view_size) / 4.0f;	
-	float min_size = default_settings.game_view_size;
-	settings.game_view_size = clamp(settings.game_view_size + increment, min_size, 1.0f);
+	float increment = (1.0f - game_view_default.size) / 4.0f;	
+	float min_size = game_view_default.size;
+	game_view.size = clamp(game_view.size + increment, min_size, 1.0f);
 	this->update_game_view();
 }
 
 void Demon::decrease_game_view_size() {	
-	float decrement = (1.0f - default_settings.game_view_size) / 4.0f;
-	float min_size = default_settings.game_view_size;
-	settings.game_view_size = clamp(settings.game_view_size - decrement, min_size, 1.0f);
+	float decrement = (1.0f - game_view_default.size) / 4.0f;
+	float min_size = game_view_default.size;
+	game_view.size = clamp(game_view.size - decrement, min_size, 1.0f);
 	this->update_game_view();
 }
 
 void Demon::update_game_view() {
-	GameViewStyle style = settings.game_view_style;
-	float size = settings.game_view_size;	
+	GameViewStyle style = game_view.style;
+	float size = game_view.size;	
 	this->update_game_view(style, size, size);
 }
 
 void Demon::update_game_view(GameViewStyle style) {
-	settings.game_view_style = style;
-	float size = settings.game_view_size;	
+	game_view.style = style;
+	float size = game_view.size;	
 	this->update_game_view(style, size, size);
 }
 

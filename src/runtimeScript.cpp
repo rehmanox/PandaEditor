@@ -1,25 +1,23 @@
 #include "clockObject.h"
 #include "asyncTaskManager.h"
 #include "runtimeScript.hpp"
+#include <mouseButton.h>
 
 // Constructors
 RuntimeScript::RuntimeScript(Demon& demon) :
     demon(demon),
-    mouse(demon.engine.mouse),
-    resource_manager(demon.engine.resource_manager),
-    game(demon.game) {}
+    game(demon.game),
+    resource_manager(demon.engine.resource_manager) {}
 
 // Destructor
 RuntimeScript::~RuntimeScript() {}
 
 void RuntimeScript::start() {
     script_name = RuntimeScript::get_name();
-
+        
     // Create update task
-    update_task = make_task([this](AsyncTask* task) -> AsyncTask::DoneStatus {
-        if (game.mouse_watcher->has_mouse() || 
-            (this->demon.engine.mouse_watcher->has_mouse() && 
-            this->demon.engine.mouse.is_mouse_centered())) {
+    update_task = make_task([this](AsyncTask* task) -> AsyncTask::DoneStatus {  
+        if (game.mouse.has_mouse()) {
             dt = ClockObject::get_global_clock()->get_dt();
             this->on_update(task);
         }

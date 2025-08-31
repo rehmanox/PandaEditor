@@ -15,23 +15,18 @@ const int MOUSE_THREE = MouseButton::three().get_index();
 const int MOUSE_FOUR  = MouseButton::four().get_index();
 const int MOUSE_FIVE  = MouseButton::five().get_index();
 
-Mouse::Mouse(Engine& _engine)
-: _engine(_engine),
-  _x(0), _y(0),
-  _mx(0), _my(0),
-  _dx(0), _dy(0),
-  _zoom(0),
-  _vertical_axis(0), _horizontal_axis(0),
-  _current_mouse_mode(WindowProperties::M_absolute),
-  _force_relative_mode(false) 
-{}
+Mouse::Mouse() :
+    _x(0) , _y(0),
+    _mx(0), _my(0),
+    _dx(0), _dy(0),
+    _zoom(0),
+    _vertical_axis(0), _horizontal_axis(0),
+    _force_relative_mode(false) {}
 
-void Mouse::initialize() {
-    _engine.accept("alt",        [this]() { this->set_modifier(ALT_KEY_IDX);    });
-    _engine.accept("alt-up",     [this]() { this->clear_modifier(ALT_KEY_IDX);  });
-    _engine.accept("control",    [this]() { this->set_modifier(CTRL_KEY_IDX);   });
-    _engine.accept("control-up", [this]() { this->clear_modifier(CTRL_KEY_IDX); });
-
+void Mouse::initialize(WPT(GraphicsWindow) win, WPT(MouseWatcher) mw) {
+    _win = win;
+    _mouse_watcher = mw;
+        
     // Initialize mouse button states
     _mouse_buttons[MOUSE_ONE]   = false;
     _mouse_buttons[MOUSE_TWO]   = false;
@@ -41,23 +36,23 @@ void Mouse::initialize() {
 }
 
 void Mouse::update() {
-    if (!_engine.mouse_watcher->has_mouse())
+    if (!_mouse_watcher->has_mouse())
         return;
 
     for (auto& btn : _mouse_buttons) {
-        _mouse_buttons[btn.first] = _engine.mouse_watcher->is_button_down(btn.first);
+        _mouse_buttons[btn.first] = _mouse_watcher->is_button_down(btn.first);
     }
 
     // Get pointer from screen
-    const MouseData pointer_data = _engine.win->get_pointer(0);
+    const MouseData pointer_data = _win->get_pointer(0);
 
     // Delta calculation (new - old)
     _dx = pointer_data.get_x() - _x;
     _dy = pointer_data.get_y() - _y;
 
     // Normalized coords from watcher
-    _mx = _engine.mouse_watcher->get_mouse_x();
-    _my = _engine.mouse_watcher->get_mouse_y();
+    _mx = _mouse_watcher->get_mouse_x();
+    _my = _mouse_watcher->get_mouse_y();
 
     if (_force_relative_mode) { 
         _horizontal_axis = (_mx > 0) ? 1 : (_mx < 0) ? -1 : 0;
@@ -76,14 +71,10 @@ void Mouse::update() {
 }
 
 void Mouse::center_mouse() {
-    _engine.win->move_pointer(
+    _win->move_pointer(
         0,
-        static_cast<int>(_engine.win->get_properties().get_x_size() / 2),
-        static_cast<int>(_engine.win->get_properties().get_y_size() / 2));
-}
-
-void Mouse::clear_modifier(int index) {
-    _modifiers.erase(std::remove(_modifiers.begin(), _modifiers.end(), index), _modifiers.end());
+        static_cast<int>(_win->get_properties().get_x_size() / 2),
+        static_cast<int>(_win->get_properties().get_y_size() / 2));
 }
 
 void Mouse::toggle_force_relative_mode() {
@@ -91,12 +82,8 @@ void Mouse::toggle_force_relative_mode() {
     std::cout << "Toggle force mouse relative mode: " << _force_relative_mode << std::endl;
 }
 
-bool Mouse::has_modifier(int index) const {
-    return std::find(_modifiers.begin(), _modifiers.end(), index) != _modifiers.end();
-}
-
 bool Mouse::has_mouse() const {
-    return _engine.mouse_watcher->has_mouse();
+    return _mouse_watcher->has_mouse();
 }
 
 bool Mouse::is_button_down(int btn_idx) const {
@@ -117,50 +104,9 @@ float Mouse::get_vertical() const { return _vertical_axis; }
 float Mouse::get_horizontal() const { return _horizontal_axis; }
 
 bool Mouse::is_mouse_centered() const {
-    return _force_relative_mode || (_current_mouse_mode == WindowProperties::M_relative);
+    return _force_relative_mode;
 }
 
 const std::unordered_map<int, bool>& Mouse::get_mouse_buttons() const { 
     return _mouse_buttons; 
-}
-
-void Mouse::set_modifier(int index) {
-    if (std::find(_modifiers.begin(), _modifiers.end(), index) == _modifiers.end()) {
-        _modifiers.push_back(index);
-    }
-}
-
-void Mouse::set_mouse_mode(int requested_mouse_mode) {
-    WindowProperties wp = _engine.win->get_properties();
-
-    if (requested_mouse_mode == WindowProperties::M_absolute ||
-        requested_mouse_mode == WindowProperties::M_relative ||
-        requested_mouse_mode == WindowProperties::M_confined) {
-        wp.set_mouse_mode((WindowProperties::MouseMode)requested_mouse_mode);
-        std::cout << "Mouse mode set to: " << requested_mouse_mode << std::endl;
-    } else {
-        std::cout << "Unable to set_mouse_mode: " 
-                  << requested_mouse_mode << " not found." << std::endl;
-        wp.set_mouse_mode(WindowProperties::M_absolute);
-        _current_mouse_mode = WindowProperties::M_absolute;
-        return;
-    }
-
-    _engine.win->request_properties(wp);
-
-    // Resolve mouse mode asynchronously (safer capture with weak ref if Engine uses shared_ptr)
-    PT(AsyncTask) current_mouse_mode_resolve_update = 
-        (make_task([this, requested_mouse_mode](AsyncTask *task) -> AsyncTask::DoneStatus {
-            WindowProperties wp = _engine.win->get_properties();
-            _current_mouse_mode = wp.get_mouse_mode();
-
-            if (requested_mouse_mode != _current_mouse_mode) {
-                std::cout << "ACTUAL MOUSE MODE: " << _current_mouse_mode << std::endl;
-            }
-
-            return AsyncTask::DS_done;
-        }, "MouseModeResolveUpdate"));
-
-    current_mouse_mode_resolve_update->set_delay(0);
-    AsyncTaskManager::get_global_ptr()->add(current_mouse_mode_resolve_update);
 }
